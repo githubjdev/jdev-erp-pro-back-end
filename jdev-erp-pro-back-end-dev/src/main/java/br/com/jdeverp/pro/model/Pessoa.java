@@ -3,6 +3,10 @@ package br.com.jdeverp.pro.model;
 import java.io.Serializable;
 import java.time.LocalDate;
 
+import org.hibernate.validator.constraints.br.CNPJ;
+import org.hibernate.validator.constraints.br.CNPJ.Format;
+import org.hibernate.validator.constraints.br.CPF;
+
 import br.com.jdeverp.pro.enums.TipoPessoa;
 import jakarta.persistence.Column;
 import jakarta.persistence.ConstraintMode;
@@ -18,9 +22,18 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
-@Table(name = "pessoa")
+@Table(name = "pessoa", uniqueConstraints = {
+		@UniqueConstraint(name = "unique_inscricao_estadual", columnNames = "inscEstadual"),
+		@UniqueConstraint(name = "unique_cnpj", columnNames = "cnpj"),
+		@UniqueConstraint(name = "unique_cpf", columnNames = "cpf"),
+		@UniqueConstraint(name = "unique_email", columnNames = "email"),
+})
 @SequenceGenerator(name = "seq_pessoa", sequenceName = "seq_pessoa", allocationSize = 1, initialValue = 1)
 public class Pessoa implements Serializable {
 
@@ -30,6 +43,7 @@ public class Pessoa implements Serializable {
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_pessoa")
     private Long id;
 
+    @NotBlank(message = "Nome deve ser informado")
     @Column(length = 200, nullable = false)
     private String nome;
 
@@ -39,48 +53,60 @@ public class Pessoa implements Serializable {
     @Column(name = "nome_fantasia", length = 200)
     private String nomeFantasia;
 
-    @Column(name = "insc_estadual", length = 200)
+    @Column(name = "insc_estadual", length = 200, unique = true)
     private String inscEstadual;
 
-    @Column(length = 50)
+    @CNPJ(format = Format.ALPHANUMERIC, message = "Informe o CNPJ corretamente")
+    @Column(length = 50, unique = true)
     private String cnpj;
 
+    @NotBlank(message = "Informe o telefone corretamente")
     @Column(length = 50, nullable = false)
     private String telefone;
 
-    @Column(length = 30, nullable = false)
+    @CPF(message = "Informe o CPF corretamente")
+    @Column(length = 30, nullable = false, unique = true)
     private String cpf;
 
-    @Column(length = 250, nullable = false)
+    @Email(message = "E-mail deve ser informado corretamente")
+    @Column(length = 250, nullable = false, unique = true)
     private String email;
 
+    @NotNull(message = "Tipo da pessoa deve ser informado")
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_pessoa", nullable = false)
     private TipoPessoa tipoPessoa;
 
     private Boolean ativo = true;
 
-    @Column(name = "data_cadastro", nullable = false)
+    @NotNull(message = "Data de cadastro deve ser informado")
+    @Column(name = "data_cadastro", nullable = false, updatable = false)
     private LocalDate dataCadastro = LocalDate.now();
 
     @Column(length = 1000)
     private String observacao;
 
+    @NotBlank(message = "Informe o CEP corretamente")
     @Column(length = 50, nullable = false)
     private String cep;
 
+    @NotBlank(message = "Informe nome da rua corretamente")
     @Column(length = 255, nullable = false)
     private String logradouro;
 
+    @NotBlank(message = "Informe o bairro orretamente")
     @Column(length = 250 , nullable = false)
     private String bairro;
 
+    @NotBlank(message = "Informe o estado orretamente")
     @Column(length = 200, nullable = false)
     private String estado;
 
+    @NotBlank(message = "Informe o cidade orretamente")
     @Column(length = 300 , nullable = false)
     private String cidade;
 
+    @NotBlank(message = "Informe o país orretamente")
     @Column(length = 250 , nullable = false)
     private String pais;
 
@@ -88,6 +114,7 @@ public class Pessoa implements Serializable {
     private String complemento;
 
     /*Refere-se ao cadastro da emrpreda em multitanenti*/
+    @NotNull(message = "Empresa deve ser informada corretamente")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "empresa_id", 
             nullable = false,
