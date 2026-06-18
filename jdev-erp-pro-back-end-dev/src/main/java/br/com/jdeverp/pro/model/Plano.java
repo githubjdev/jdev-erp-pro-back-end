@@ -14,7 +14,9 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.Data;
 
+@Data
 @Entity
 @Table(name = "plano")
 @SequenceGenerator(name = "seq_plano", sequenceName = "seq_plano", allocationSize = 1, initialValue = 1)
@@ -62,69 +64,5 @@ public class Plano {
 	  private List<Empresa> empresas = new ArrayList<Empresa>();
 	*/
 	
-
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public String getNome() {
-		return nome;
-	}
-
-	public void setNome(String nome) {
-		this.nome = nome;
-	}
-
-	public String getDescricao() {
-		return descricao;
-	}
-
-	public void setDescricao(String descricao) {
-		this.descricao = descricao;
-	}
-
-	public Boolean getAtivo() {
-		return ativo;
-	}
-
-	public void setAtivo(Boolean ativo) {
-		this.ativo = ativo;
-	}
-
-	public Double getValorMensal() {
-		return valorMensal;
-	}
-
-	public void setValorMensal(Double valorMensal) {
-		this.valorMensal = valorMensal;
-	}
-
-	public Integer getLimiteUsuario() {
-		return limiteUsuario;
-	}
-
-	public void setLimiteUsuario(Integer limiteUsuario) {
-		this.limiteUsuario = limiteUsuario;
-	}
-
-	public Integer getLimiteCliente() {
-		return limiteCliente;
-	}
-
-	public void setLimiteCliente(Integer limiteCliente) {
-		this.limiteCliente = limiteCliente;
-	}
-
-	public TipoPlano getTipoPlano() {
-		return tipoPlano;
-	}
-
-	public void setTipoPlano(TipoPlano tipoPlano) {
-		this.tipoPlano = tipoPlano;
-	}
 
 }

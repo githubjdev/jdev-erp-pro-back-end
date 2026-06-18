@@ -12,13 +12,19 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import lombok.Data;
 
+@Data
 @Entity
-@Table(name = "empresa")
+@Table(name = "empresa", uniqueConstraints = {
+		@UniqueConstraint(name="unique_pessoa_empresa", columnNames = {"pessoa_id"})
+})
 @SequenceGenerator(name = "seq_empresa", sequenceName = "seq_empresa", allocationSize = 1, initialValue = 1)
 public class Empresa {
 
@@ -50,71 +56,14 @@ public class Empresa {
 	@Column(nullable = true)
 	private LocalDate vigenciaPlano;
 	
-
+	@NotNull(message =  "Pessoa deve ser informada para cadastrar a instituição juridíca (PJ)")
+    @OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "pessoa_id", 
+	       nullable = false, 
+	       foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, name = "pessoa_fk"))
+	private Pessoa pessoa;
 	
 
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public Plano getPlano() {
-		return plano;
-	}
-
-	public void setPlano(Plano plano) {
-		this.plano = plano;
-	}
-
-	public Integer getTotalUsuario() {
-		return totalUsuario;
-	}
-
-	public void setTotalUsuario(Integer totalUsuario) {
-		this.totalUsuario = totalUsuario;
-	}
-
-	public Integer getTotalCliente() {
-		return totalCliente;
-	}
-
-	public void setTotalCliente(Integer totalCliente) {
-		this.totalCliente = totalCliente;
-	}
-
-	public Boolean getPlanoAtivo() {
-		return planoAtivo;
-	}
-
-	public void setPlanoAtivo(Boolean planoAtivo) {
-		this.planoAtivo = planoAtivo;
-	}
-
-	public Boolean getBloqueio() {
-		return bloqueio;
-	}
-
-	public void setBloqueio(Boolean bloqueio) {
-		this.bloqueio = bloqueio;
-	}
-
-	public String getLogoMarca() {
-		return logoMarca;
-	}
-
-	public void setLogoMarca(String logoMarca) {
-		this.logoMarca = logoMarca;
-	}
-
-	public LocalDate getVigenciaPlano() {
-		return vigenciaPlano;
-	}
-
-	public void setVigenciaPlano(LocalDate vigenciaPlano) {
-		this.vigenciaPlano = vigenciaPlano;
-	}
+	
 
 }
