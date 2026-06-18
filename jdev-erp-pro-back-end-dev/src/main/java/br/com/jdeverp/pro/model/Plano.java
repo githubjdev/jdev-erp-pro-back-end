@@ -56,6 +56,12 @@ public class Plano {
 	@Enumerated(EnumType.STRING)
 	private TipoPlano tipoPlano;
 	
+	
+	/*Deixamos comentado porque o banco pode crescer muito e ter 500, 1000, 2000 empresaas para um 1 plano e ficar lento
+	  @OneToMany(mappedBy = "plano")
+	  private List<Empresa> empresas = new ArrayList<Empresa>();
+	*/
+	
 
 	public Long getId() {
 		return id;

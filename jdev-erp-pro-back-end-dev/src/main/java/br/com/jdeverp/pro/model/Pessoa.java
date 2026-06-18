@@ -118,7 +118,8 @@ public class Pessoa implements Serializable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "empresa_id", 
             nullable = false,
-            foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, name = "empresa_fk"))
+            foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+                  name = "empresa_fk"))
     private Empresa empresa;
     
     

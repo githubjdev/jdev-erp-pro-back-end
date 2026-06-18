@@ -28,7 +28,8 @@ public class Empresa {
 
 	@NotNull(message = "Plano deve ser informado")
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "plano_id", nullable = false, foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, name = "plano_fk"))
+	@JoinColumn(name = "plano_id", nullable = false, 
+	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, name = "plano_fk"))
 	private Plano plano;
 
 	@Column(nullable = true)
