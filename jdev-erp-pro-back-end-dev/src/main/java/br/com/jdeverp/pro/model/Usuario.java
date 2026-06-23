@@ -67,7 +67,7 @@ public class Usuario implements UserDetails {
 	private ClienteFuncionario clienteFuncionario;
 	
 	
-
+    /*Irá carregar os Role de cada usuário*/
 	@ManyToMany(fetch = FetchType.LAZY)
 	@JoinTable(name = "role_usuario", 
 	          uniqueConstraints = @UniqueConstraint(name="unique_role_user",
