@@ -66,7 +66,7 @@ public class Produto {
 	
     @NotNull(message = "Unidade de medida deve ser informado")
     @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_pessoa", nullable = false)
+    @Column(name = "unidade_medida", nullable = false)
 	private UnidadeMedida unidadeMedida;
     
     

@@ -11,9 +11,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "role_usuario")
+@Table(name = "role_usuario", uniqueConstraints = {
+		@UniqueConstraint(name = "unique_role_user", columnNames = { "acesso_id", "usuario_id" }) 
+})
 @SequenceGenerator(name = "seq_role_usuario", sequenceName = "seq_role_usuario", allocationSize = 1)
 public class RoleUsuario {
 	
