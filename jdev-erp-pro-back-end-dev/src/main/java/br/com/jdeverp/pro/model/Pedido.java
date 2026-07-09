@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import br.com.jdeverp.pro.enums.FormaPagamento;
+import br.com.jdeverp.pro.enums.StatusPedido;
 import br.com.jdeverp.pro.enums.TipoPedido;
 import jakarta.persistence.Column;
 import jakarta.persistence.ConstraintMode;
@@ -36,6 +37,11 @@ public class Pedido {
 	@NotBlank(message = "Inform o número do pedido")
 	@Column(nullable = false)
 	private String numeroPedido;
+	
+	
+	@NotNull(message = "Informa o status do pedido")
+	@Enumerated(EnumType.STRING)
+	private StatusPedido statusPedido;
 	
 	@NotNull(message = "Informe a forma de pagamento")
 	@Enumerated(EnumType.STRING)
