@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import br.com.jdeverp.pro.enums.FormaPagamento;
+import br.com.jdeverp.pro.enums.StatusPedido;
 import br.com.jdeverp.pro.enums.TipoPedido;
 import jakarta.persistence.Column;
 import jakarta.persistence.ConstraintMode;
@@ -29,24 +30,28 @@ import lombok.Data;
 @SequenceGenerator(name = "seq_pedido", sequenceName = "seq_pedido", allocationSize = 1, initialValue = 1)
 public class Pedido {
 	
-	
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_pedido")
 	private Long id;
 	
-	@NotBlank(message = "Número do pedido deve ser informado")
+	@NotBlank(message = "Inform o número do pedido")
 	@Column(nullable = false)
 	private String numeroPedido;
 	
+	
+	@NotNull(message = "Informa o status do pedido")
 	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
+	private StatusPedido statusPedido;
+	
+	@NotNull(message = "Informe a forma de pagamento")
+	@Enumerated(EnumType.STRING)
 	private FormaPagamento formaPagamento;
 	
+	@NotNull(message = "Informe o tipo do pedido")
 	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
 	private TipoPedido tipoPedido;
 	
-	@NotNull(message = "Informe a data do pedido")
+	@NotNull(message = "Informe a forma de pagamento")
 	@Column(nullable = false)
 	private LocalDate dataPedido;
 	
@@ -60,30 +65,29 @@ public class Pedido {
 	private BigDecimal total = BigDecimal.ZERO;
 	
 	private String observacao;
-	
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "vendedor_id", nullable = false,
+    foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+          name = "vendedor_fk"))
+    private Usuario vendedor;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "vendedor_id", 
-	        nullable = false, 
-	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
-	                                name = "vendedor_fk"))
-	private Usuario vendedor;
+	@JoinColumn(name = "cliente_id", nullable = false,
+    foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+          name = "cliente_fk"))
+    private Usuario cliente;
+
+	
+    @NotNull(message = "Empresa deve ser informada corretamente")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empresa_id", 
+            nullable = false,
+            foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+                  name = "empresa_fk"))
+    private Empresa empresa;
+
 	
 	
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "cliente_id", 
-	        nullable = false, 
-	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
-	                                name = "cliente_fk"))
-	private Usuario cliente;
-	
-	
-	@NotNull(message = "Empresa deve ser informado")
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "empresa_id", 
-	        nullable = false, 
-	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
-	                                name = "empresa_fk"))
-	private Empresa empresa;
 
 }
