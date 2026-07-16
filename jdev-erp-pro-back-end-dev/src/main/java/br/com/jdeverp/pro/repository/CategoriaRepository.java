@@ -22,23 +22,23 @@ public interface CategoriaRepository extends JpaJdevRepository<Categoria, Long> 
 	
 	/*Busca as categroias por partes ou nome completo passdo por parametro e da empresa passada por parametro*/
 	@Query("select c from Categoria c where c.empresa.id = :idEmpresa "
-								+ " and upper(unaccent(trim(c.nome))) "
-								+ " like upper(concat('%', unaccent(trim(:nome)), '%')) ")
+								+ " and upper(trim(c.nome)) "
+								+ "  like upper(concat('%', trim(:nome), '%')) ")
 	List<Categoria> buscaPorNome(@Param("idEmpresa") Long idEmpresa, @Param("nome") String nome);
 	
 	
 	
 	/*Retorna true se já existir categoria com o mesmo nome para a mesma empresa, no caso não podemso deixar salvar para não ficar repetido no banco de dados*/
-	@Query("select count(c) > 0 from Categoria c where c.empresa.id = :idEmpresa "
-			+ " and upper(unaccent(trim(c.nome))) "
-			+ " = upper(concat('%', unaccent(trim(:nome)), '%')) ")
+	@Query("select count(c.id) > 0 from Categoria c where c.empresa.id = :idEmpresa "
+			+ " and upper((trim(c.nome))) "
+			+ " = upper(trim(:nome)) ")
     boolean existePorNome(@Param("idEmpresa") Long idEmpresa, @Param("nome") String nome);
 	
 	
 	/*Verifica se existe outra categoria no banco de dados com o mesmo nome mas ID diferentes da que está tentando atualizar*/
 	@Query("select count(c) > 0 from Categoria c where c.empresa.id = :idEmpresa "
-			+ " and upper(unaccent(trim(c.nome))) "
-			+ " = upper(concat('%', unaccent(trim(:nome)), '%')) and c.id <> =:id")
+			+ " and upper(trim(c.nome)) "
+			+ " = upper(trim(:nome)) and c.id <> :id")
     boolean existePorNomeDiferenteId(@Param("idEmpresa") Long idEmpresa,
     		                              @Param("nome") String nome,
     		                              @Param("id") Long id);

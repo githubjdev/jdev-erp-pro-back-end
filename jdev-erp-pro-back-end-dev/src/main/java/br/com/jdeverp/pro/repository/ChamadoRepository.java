@@ -22,23 +22,23 @@ public interface ChamadoRepository extends JpaJdevRepository<Chamado, Long> {
 	
 	/*Busca as chamados por partes ou titulo completo passdo por parametro e da empresa passada por parametro*/
 	@Query("select c from Chamado c where c.empresa.id = :idEmpresa "
-								+ " and upper(unaccent(trim(c.titulo))) "
-								+ " like upper(concat('%', unaccent(trim(:titulo)), '%')) ")
+								+ " and upper(trim(c.titulo)) "
+								+ " like upper(trim(:titulo)) ")
 	List<Chamado> buscaPorNome(@Param("idEmpresa") Long idEmpresa, @Param("titulo") String titulo);
 	
 	
 	
 	/*Retorna true se já existir chamdo com o mesmo titulo para a mesma empresa, no caso não podemso deixar salvar para não ficar repetido no banco de dados*/
 	@Query("select count(c) > 0 from Chamado c where c.empresa.id = :idEmpresa "
-			+ " and upper(unaccent(trim(c.titulo))) "
-			+ " = upper(concat('%', unaccent(trim(:titulo)), '%')) ")
+			+ " and upper(trim(c.titulo)) "
+			+ " = upper(trim(:titulo)) ")
     boolean existePorNome(@Param("idEmpresa") Long idEmpresa, @Param("titulo") String titulo);
 	
 	
 	/*Verifica se existe outra chamndo no banco de dados com o mesmo titulo mas ID diferentes da que está tentando atualizar*/
 	@Query("select count(c) > 0 from Chamado c where c.empresa.id = :idEmpresa "
-			+ " and upper(unaccent(trim(c.titulo))) "
-			+ " = upper(concat('%', unaccent(trim(:titulo)), '%')) and c.id <> = :id")
+			+ " and upper(trim(c.titulo)) "
+			+ " = upper(trim(:titulo)) and c.id <> :id")
     boolean existePorNomeDiferenteId(@Param("idEmpresa") Long idEmpresa,
     		                              @Param("titulo") String titulo,
     		                              @Param("id") Long id);

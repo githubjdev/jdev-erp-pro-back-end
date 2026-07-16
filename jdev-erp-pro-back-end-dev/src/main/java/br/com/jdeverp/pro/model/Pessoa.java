@@ -55,7 +55,7 @@ public class Pessoa implements Serializable {
     @Column(name = "nome_fantasia", length = 200)
     private String nomeFantasia;
 
-    @Column(name = "insc_estadual", length = 200, unique = true)
+    @Column(name = "inscricao_estadual", length = 200, unique = true)
     private String inscEstadual;
 
     @CNPJ(format = Format.ALPHANUMERIC, message = "Informe o CNPJ corretamente")

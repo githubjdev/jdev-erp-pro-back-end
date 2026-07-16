@@ -2,8 +2,8 @@ package br.com.jdeverp.pro.enums;
 
 public enum TipoPessoa {
 
-	PESSOA_FISICA("Pessoa Fisica"),
-	PESSOA_JURIDICA("Pessoa Juridica");
+	FISICA("Pessoa Fisica"),
+	JURIDICA("Pessoa Juridica");
 
 	private final String descricao;
 
