@@ -52,7 +52,7 @@ public class Pessoa {
 	@Column
 	private String nomeFantasia;
 
-	@Column(unique = true)
+	@Column(unique = true, name = "inscricao_estadual")
 	private String inscricaoEstadual;
 
 	@CNPJ(message = "Informe o CNPJ corretamente",format = Format.ALPHANUMERIC)
