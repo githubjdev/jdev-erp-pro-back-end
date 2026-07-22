@@ -78,3 +78,36 @@ select nextval('seq_empresa');
 
 --Habilita restrições, trigger e contrains
 SET session_replication_role = origin;
+
+
+INSERT INTO categoria (id, nome, empresa_id) VALUES
+(nextval('seq_categoria'), 'Eletrônicos', 1),
+(nextval('seq_categoria'), 'Informática', 1),
+(nextval('seq_categoria'), 'Celulares', 1),
+(nextval('seq_categoria'), 'Notebooks', 1),
+(nextval('seq_categoria'), 'Tablets', 1),
+(nextval('seq_categoria'), 'Periféricos', 1),
+(nextval('seq_categoria'), 'Monitores', 1),
+(nextval('seq_categoria'), 'Impressoras', 1),
+(nextval('seq_categoria'), 'Redes', 1),
+(nextval('seq_categoria'), 'Áudio', 1),
+(nextval('seq_categoria'), 'Vídeo', 1),
+(nextval('seq_categoria'), 'Games', 1),
+(nextval('seq_categoria'), 'Móveis', 1),
+(nextval('seq_categoria'), 'Escritório', 1),
+(nextval('seq_categoria'), 'Papelaria', 1),
+(nextval('seq_categoria'), 'Limpeza', 1),
+(nextval('seq_categoria'), 'Cozinha', 1),
+(nextval('seq_categoria'), 'Ferramentas', 1),
+(nextval('seq_categoria'), 'Construção', 1),
+(nextval('seq_categoria'), 'Jardim', 1),
+(nextval('seq_categoria'), 'Automotivo', 1),
+(nextval('seq_categoria'), 'Esportes', 1),
+(nextval('seq_categoria'), 'Moda Masculina', 1),
+(nextval('seq_categoria'), 'Moda Feminina', 1),
+(nextval('seq_categoria'), 'Calçados', 1),
+(nextval('seq_categoria'), 'Acessórios', 1),
+(nextval('seq_categoria'), 'Brinquedos', 1),
+(nextval('seq_categoria'), 'Livros', 1),
+(nextval('seq_categoria'), 'Pet Shop', 1),
+(nextval('seq_categoria'), 'Saúde e Beleza', 1);
