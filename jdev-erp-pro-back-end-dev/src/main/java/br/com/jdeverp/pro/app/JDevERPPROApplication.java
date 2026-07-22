@@ -32,6 +32,7 @@ public class JDevERPPROApplication {
 	void main(String[] args) {
 		SpringApplication app = new SpringApplication(JDevERPPROApplication.class);
 		app.run(args);
+
 	}
 
 	@Bean(name = "cacheManager")

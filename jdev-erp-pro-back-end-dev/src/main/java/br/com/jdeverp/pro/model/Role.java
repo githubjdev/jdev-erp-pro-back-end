@@ -12,13 +12,12 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "role", uniqueConstraints = {
-		@UniqueConstraint(name = "unique_acesso", columnNames = "acesso"),
+@Table(name = "role", uniqueConstraints = { 
+		@UniqueConstraint(columnNames = "acesso", name = "unique_acesso") 
 })
 @SequenceGenerator(name = "seq_role", sequenceName = "seq_role", allocationSize = 1, initialValue = 1)
 public class Role implements GrantedAuthority {
@@ -30,13 +29,12 @@ public class Role implements GrantedAuthority {
 	private Long id;
 
 	@NotBlank(message = "Acesso deve ser informado")
-	@NotNull(message = "Acesso não pode ser nulo")
-	@Column(nullable = false, unique = true)
+	@Column(nullable = false)
 	private String acesso;
 
+	/*Nome do acesso*/
 	@Override
 	public @Nullable String getAuthority() {
-
 		return this.acesso;
 	}
 

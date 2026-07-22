@@ -1,10 +1,14 @@
 package br.com.jdeverp.pro.model;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
+import br.com.jdeverp.pro.enums.TipoMovimentacaoProduto;
 import jakarta.persistence.Column;
 import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
@@ -20,35 +24,40 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "item_pedido")
-@SequenceGenerator(name = "seq_item_pedido", sequenceName = "seq_item_pedido", allocationSize = 1, initialValue = 1)
-public class ItemPedido {
+@Table(name = "movimentacao_produto")
+@SequenceGenerator(name = "seq_movimentacao_produto", sequenceName = "seq_movimentacao_produto", allocationSize = 1, initialValue = 1)
+public class MovimentacaProduto {
 	
 	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_item_pedido")
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_movimentacao_produto")
 	private Long id;
 	
-	@DecimalMin(value = "0.1", message = "Valor mínimo de 0.1 deve ser informado")
+	@DecimalMin(value = "0.1", message = "Valor minimo de 0.1 deve ser informado")
 	@Column(nullable = false)
 	private Double quantidade = 1.0;
 	
-	private BigDecimal subTotal = BigDecimal.ZERO;
-	private BigDecimal desconto = BigDecimal.ZERO;
-	private BigDecimal total = BigDecimal.ZERO;
+	@Column(nullable = false)
+	private LocalDate dataMovimento;
 	
-	@NotNull(message = "Produto deve ser informado")
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "produto_id", 
-	        nullable = false, 
-	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
-	                                name = "produto_fk"))
-	private Produto produto;
+	private BigDecimal valor = BigDecimal.ZERO;
+	
+	@NotNull(message = "Informe o tipo da movimentação")
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private TipoMovimentacaoProduto tipoMovimentacaoProduto;
+	
+    @NotNull(message = "Produto deve ser informada corretamente")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "produto_id", 
+            nullable = false,
+            foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+                  name = "produto_fk"))
+    private Produto produto;
 	
 	
-	@NotNull(message = "Pedido deve ser informado")
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "pedido_id", 
-	        nullable = false, 
+	        nullable = true, 
 	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
 	                                name = "pedido_fk"))
 	private Pedido pedido;

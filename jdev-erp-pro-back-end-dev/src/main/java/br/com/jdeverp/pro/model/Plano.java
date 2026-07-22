@@ -13,10 +13,9 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
 
-@Data
 @Entity
 @Table(name = "plano")
 @SequenceGenerator(name = "seq_plano", sequenceName = "seq_plano", allocationSize = 1, initialValue = 1)
@@ -27,30 +26,33 @@ public class Plano {
 	private Long id;
 
 	@NotBlank(message = "Nome deve ser informado")
-	@NotNull(message = "Nome não pode ser nulo")
+	@NotEmpty(message = "Nome não pode ser nulo")
 	@Column(nullable = false)
 	private String nome;
 
 	@NotBlank(message = "Descrição deve ser informado")
-	@NotNull(message = "Descrição não pode ser nulo")
+	@NotEmpty(message = "Descrição não pode ser nulo")
 	@Column(nullable = false)
 	private String descricao;
 
 	private Boolean ativo;
 
-	@NotNull(message = "Valor Mensal não pode ser nulo")
-	@Min(value = 49, message = "Valor minímo do plano deve ser de R$ 49 reais")
-	@Max(value = 200, message = "Valor do plano deve ser no máximo R$ 200 reais")
+	@NotNull(message = "Valor mensal não pode ser nulo")
+	@Min(value = 49, message = "Valor minimo do plano deve ser de R$ 49 reais")
+	@Max(value = 200, message = "Valor do plano deve ser no máximo de R$ 200 reais")
+	@Column(nullable = false)
 	private Double valorMensal;
 
 	@NotNull(message = "Limite de usuário não pode ser nulo")
 	@Min(value = 1, message = "Limite minimo de usuário é 1")
-	@Max(value = 150, message = "Limite máximo de usuário é 150")
+	@Max(value = 150, message = "Limite máximo do usuário é 150")
+	@Column(nullable = false)
 	private Integer limiteUsuario;
 
 	@NotNull(message = "Limite de cliente não pode ser nulo")
-	@Min(value = 1, message = "Limite minimo de usuário é 1")
-	@Max(value = 150, message = "Limite máximo de usuário é 150")
+	@Min(value = 1, message = "Limite minimo de cliente é 1")
+	@Max(value = 150, message = "Limite máximo de cliente é 150")
+	@Column(nullable = false)
 	private Integer limiteCliente;
 
 	@NotNull(message = "Tipo do plano não pode ser nulo")
@@ -58,11 +60,73 @@ public class Plano {
 	@Enumerated(EnumType.STRING)
 	private TipoPlano tipoPlano;
 	
-	
 	/*Deixamos comentado porque o banco pode crescer muito e ter 500, 1000, 2000 empresaas para um 1 plano e ficar lento
 	  @OneToMany(mappedBy = "plano")
 	  private List<Empresa> empresas = new ArrayList<Empresa>();
 	*/
 	
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public String getNome() {
+		return nome;
+	}
+
+	public void setNome(String nome) {
+		this.nome = nome;
+	}
+
+	public String getDescricao() {
+		return descricao;
+	}
+
+	public void setDescricao(String descricao) {
+		this.descricao = descricao;
+	}
+
+	public Boolean getAtivo() {
+		return ativo;
+	}
+
+	public void setAtivo(Boolean ativo) {
+		this.ativo = ativo;
+	}
+
+	public Double getValorMensal() {
+		return valorMensal;
+	}
+
+	public void setValorMensal(Double valorMensal) {
+		this.valorMensal = valorMensal;
+	}
+
+	public Integer getLimiteUsuario() {
+		return limiteUsuario;
+	}
+
+	public void setLimiteUsuario(Integer limiteUsuario) {
+		this.limiteUsuario = limiteUsuario;
+	}
+
+	public Integer getLimiteCliente() {
+		return limiteCliente;
+	}
+
+	public void setLimiteCliente(Integer limiteCliente) {
+		this.limiteCliente = limiteCliente;
+	}
+
+	public TipoPlano getTipoPlano() {
+		return tipoPlano;
+	}
+
+	public void setTipoPlano(TipoPlano tipoPlano) {
+		this.tipoPlano = tipoPlano;
+	}
 
 }

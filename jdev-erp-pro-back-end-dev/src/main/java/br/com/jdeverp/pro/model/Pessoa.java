@@ -1,11 +1,10 @@
 package br.com.jdeverp.pro.model;
 
-import java.io.Serializable;
 import java.time.LocalDate;
 
 import org.hibernate.validator.constraints.br.CNPJ;
-import org.hibernate.validator.constraints.br.CNPJ.Format;
 import org.hibernate.validator.constraints.br.CPF;
+import org.hibernate.validator.constraints.br.CNPJ.Format;
 
 import br.com.jdeverp.pro.enums.TipoPessoa;
 import jakarta.persistence.Column;
@@ -31,98 +30,95 @@ import lombok.Data;
 @Data
 @Entity
 @Table(name = "pessoa", uniqueConstraints = {
-		@UniqueConstraint(name = "unique_inscricao_estadual", columnNames = "inscEstadual"),
+		@UniqueConstraint(name = "unique_incricao_estadual", columnNames = "inscricaoEstadual"),
 		@UniqueConstraint(name = "unique_cnpj", columnNames = "cnpj"),
 		@UniqueConstraint(name = "unique_cpf", columnNames = "cpf"),
 		@UniqueConstraint(name = "unique_email", columnNames = "email"),
 })
 @SequenceGenerator(name = "seq_pessoa", sequenceName = "seq_pessoa", allocationSize = 1, initialValue = 1)
-public class Pessoa implements Serializable {
+public class Pessoa {
 
-    private static final long serialVersionUID = 1L;
+	@Id
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_pessoa")
+	private Long id;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_pessoa")
-    private Long id;
+	@NotBlank(message = "Nome deve ser informado")
+	@Column(nullable = false)
+	private String nome;
 
-    @NotBlank(message = "Nome deve ser informado")
-    @Column(length = 200, nullable = false)
-    private String nome;
+	@Column
+	private String razaoSocial;
 
-    @Column(name = "razao_social", length = 200)
-    private String razaoSocial;
+	@Column
+	private String nomeFantasia;
 
-    @Column(name = "nome_fantasia", length = 200)
-    private String nomeFantasia;
+	@Column(unique = true, name = "inscricao_estadual")
+	private String inscricaoEstadual;
 
-    @Column(name = "inscricao_estadual", length = 200, unique = true)
-    private String inscEstadual;
+	@CNPJ(message = "Informe o CNPJ corretamente",format = Format.ALPHANUMERIC)
+	@Column(unique = true, nullable = false)
+	private String cnpj;
 
-    @CNPJ(format = Format.ALPHANUMERIC, message = "Informe o CNPJ corretamente")
-    @Column(length = 50, unique = true)
-    private String cnpj;
+	@NotBlank(message = "Informe o telefone corretamente")
+	@Column(nullable = false)
+	private String telefone;
 
-    @NotBlank(message = "Informe o telefone corretamente")
-    @Column(length = 50, nullable = false)
-    private String telefone;
+	@CPF(message = "Informe o CPF corretamente")
+	@Column(unique = true, nullable = false)
+	private String cpf;
 
-    @CPF(message = "Informe o CPF corretamente")
-    @Column(length = 30, nullable = false, unique = true)
-    private String cpf;
+	@Email(message = "Informe o e-mail corretamente")
+	@Column(nullable = false, unique = true)
+	private String email;
 
-    @Email(message = "E-mail deve ser informado corretamente")
-    @Column(length = 250, nullable = false, unique = true)
-    private String email;
+	@NotBlank(message = "Informe o tipo da pessoa PF ou PJ")
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private TipoPessoa tipoPessoa;
 
-    @NotNull(message = "Tipo da pessoa deve ser informado")
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_pessoa", nullable = false)
-    private TipoPessoa tipoPessoa;
+	@Column(nullable = false)
+	private Boolean ativo = true;
 
-    private Boolean ativo = true;
+	@Column(nullable = false)
+	private LocalDate dataCadastro;
 
-    @NotNull(message = "Data de cadastro deve ser informado")
-    @Column(name = "data_cadastro", nullable = false, updatable = false)
-    private LocalDate dataCadastro = LocalDate.now();
+	@Column(length = 1000)
+	private String observacao;
 
-    @Column(length = 1000)
-    private String observacao;
+	@NotBlank(message = "Informe o CEP corretamente")
+	@Column(nullable = false)
+	private String cep;
 
-    @NotBlank(message = "Informe o CEP corretamente")
-    @Column(length = 50, nullable = false)
-    private String cep;
+	@NotBlank(message = "Informe a rua/logradouro da forma correta")
+	@Column(nullable = false)
+	private String logradouro;
 
-    @NotBlank(message = "Informe nome da rua corretamente")
-    @Column(length = 255, nullable = false)
-    private String logradouro;
+	@NotBlank(message = "Informe o Bairro corretamente")
+	@Column(nullable = false)
+	private String bairro;
 
-    @NotBlank(message = "Informe o bairro orretamente")
-    @Column(length = 250 , nullable = false)
-    private String bairro;
+	@NotBlank(message = "Informe o Estado corretamente")
+	@Column(nullable = false)
+	private String estado;
 
-    @NotBlank(message = "Informe o estado orretamente")
-    @Column(length = 200, nullable = false)
-    private String estado;
+	@NotBlank(message = "Informe o Cidade corretamente")
+	@Column(nullable = false)
+	private String cidade;
 
-    @NotBlank(message = "Informe o cidade orretamente")
-    @Column(length = 300 , nullable = false)
-    private String cidade;
+	@NotBlank(message = "Informe o País corretamente")
+	@Column(nullable = false)
+	private String pais;
 
-    @NotBlank(message = "Informe o país orretamente")
-    @Column(length = 250 , nullable = false)
-    private String pais;
+	@Column
+	private String complemento;
 
-    @Column(length = 400)
-    private String complemento;
+	/*Refere-se ao cadastro da empresa em multitanci*/
+	@NotNull(message = "Empresa deve ser informado")
+	@ManyToOne(fetch = FetchType.LAZY) /* LAZY -> Carrega a empresa quando tiver necessidade */
+	@JoinColumn(name = "empresa_id", 
+	        nullable = false, 
+	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+	                                name = "empresa_fk"))
+	private Empresa empresa;
 
-    /*Refere-se ao cadastro da emrpreda em multitanenti*/
-    @NotNull(message = "Empresa deve ser informada corretamente")
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empresa_id", 
-            nullable = false,
-            foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
-                  name = "empresa_fk"))
-    private Empresa empresa;
-    
-    
 }

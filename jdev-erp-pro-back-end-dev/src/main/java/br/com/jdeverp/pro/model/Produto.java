@@ -24,71 +24,63 @@ import lombok.Data;
 @Data
 @Entity
 @Table(name = "produto", uniqueConstraints = {
-		@UniqueConstraint(name = "unique_sku", columnNames = "sku"),
+		@UniqueConstraint(name="unique_sku_empresa", columnNames = {"sku", "empresa_id"}),
+		@UniqueConstraint(name="unique_nome_produto_empresa", columnNames = {"nome", "empresa_id"}),
 })
 @SequenceGenerator(name = "seq_produto", sequenceName = "seq_produto", allocationSize = 1, initialValue = 1)
 public class Produto {
-	
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_produto")
 	private Long id;
 	
-	
 	@NotBlank(message = "Nome deve ser informado")
-	@NotNull(message = "Nome não pode ser nulo")
 	@Column(nullable = false)
 	private String nome;
 	
 	private String descricao;
 	
-	@NotBlank(message = "Imagem deve ser informado")
-	@NotNull(message = "Imagem não pode ser nulo")
-	@Column(columnDefinition = "text")
+	@NotBlank(message = "Imagem deve ser informada")
+	@Column(nullable = false, columnDefinition = "text")
 	private String imagem;
 	
-	@Min(value = 1, message = "Valor deve ser maior ou igual a 1")
+	@Min(value = 1, message = "Preço deve ser maior que R$ 1.00 reais")
 	@Column(nullable = false)
 	private Double preco;
 	
-	@Min(value = 1, message = "Estoque deve ser maior ou igual a 1")
+	@Min(value = 1, message = "Estoque deve ser maior que 1")
 	@Column(nullable = false)
 	private Double estoque;
 	
-	@Min(value = 1, message = "Estoque Minimo deve ser maior ou igual a 1")
+	@Min(value = 1, message = "Estoque Minimo deve ser maior que 1")
 	@Column(nullable = false)
 	private Double estoqueMinimo;
 	
-	@Column(unique = true)
+	@NotBlank(message = "Código SKU deve ser informado")
+	@Column(nullable = false)
 	private String sku;
-	
-	private String codigoBarra;
-	
-	
-    @NotNull(message = "Unidade de medida deve ser informado")
-    @Enumerated(EnumType.STRING)
-    @Column(name = "unidade_medida", nullable = false)
+
+	private String codigoBarra; /*Varios tipo de parafuso*/
+
+	@NotBlank(message = "Unidade de medida de ser informado")
+	@Enumerated(EnumType.STRING)
+	@Column(name = "unidade_medida", nullable = false)
 	private UnidadeMedida unidadeMedida;
-    
-    
-    
-    @NotNull(message = "Categoria deve ser informada corretamente")
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "categoria_id", 
-            nullable = false,
-            foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
-                  name = "categoria_fk"))
-    private Categoria categoria;
-    
-    
-    
-    /*Refere-se ao cadastro da emrpreda em multitanenti*/
-    @NotNull(message = "Empresa deve ser informada corretamente")
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empresa_id", 
-            nullable = false,
-            foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
-                  name = "empresa_fk"))
-    private Empresa empresa;
-    
+	
+	@NotNull(message = "Categoria deve ser informada.")
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "categoria_id", nullable = false, 
+	          foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+	                    name = "categoria_fk"))
+	private Categoria categoria;
+	
+	/*Refere-se ao cadastro da empresa em multitanci*/
+	@NotNull(message = "Empresa deve ser informado")
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "empresa_id", 
+	        nullable = false, 
+	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+	                                name = "empresa_fk"))
+	private Empresa empresa;
 
 }

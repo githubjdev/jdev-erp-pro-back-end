@@ -21,56 +21,57 @@ import lombok.Data;
 @Entity
 @Table(name = "mensagem")
 @SequenceGenerator(name = "seq_mensagem", sequenceName = "seq_mensagem", allocationSize = 1, initialValue = 1)
-
 public class Mensagem {
-	
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_mensagem")
 	private Long id;
 	
-	
-	@Column(nullable = true)
+	@Column(nullable = false)
 	private LocalDate dataEnvio;
-
+	
 	private Boolean lida = false;
-
+	
 	@NotNull(message = "Conteúdo da mensagem deve ser informado")
-	@Column(nullable = true, columnDefinition = "text")
+	@Column(nullable = false, columnDefinition = "text")
 	private String conteudo;
 	
 	@Column(nullable = false, columnDefinition = "text")
 	private String arquivo;
 	
+	
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "chamado_id", 
-    nullable = false,
-    foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
-          name = "chamado_fk"))
-    private Chamado chamado;
+	        nullable = false, 
+	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+	                                name = "chamado_fk"))
+	private Chamado chamado;
 	
-
+	
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "atendente_id", 
-    nullable = false,
-    foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
-          name = "atendente_fk"))
-    private Usuario atendente;
-
+	        nullable = false, 
+	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+	                                name = "atendente_fk"))
+	private Usuario atendente;
+	
+	
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "cliente_id", nullable = false,
-    foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
-          name = "cliente_fk"))
-    private Usuario cliente;
+	@JoinColumn(name = "cliente_id", 
+	        nullable = false, 
+	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+	                                name = "cliente_fk"))
+	private Usuario cliente;
 	
 	
-    @NotNull(message = "Empresa deve ser informada corretamente")
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empresa_id", 
-            nullable = false,
-            foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
-                  name = "empresa_fk"))
-    private Empresa empresa;
-
+	@NotNull(message = "Empresa deve ser informado")
+	@ManyToOne(fetch = FetchType.LAZY) /* LAZY -> Carrega a empresa quando tiver necessidade */
+	@JoinColumn(name = "empresa_id", 
+	        nullable = false, 
+	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+	                                name = "empresa_fk"))
+	private Empresa empresa;
+	
 	
 	
 

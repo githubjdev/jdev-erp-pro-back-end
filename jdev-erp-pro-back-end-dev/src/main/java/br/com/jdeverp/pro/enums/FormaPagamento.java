@@ -1,7 +1,7 @@
 package br.com.jdeverp.pro.enums;
 
-
 public enum FormaPagamento {
+	
 
     DINHEIRO("Dinheiro"),
     PIX("PIX"),
@@ -34,4 +34,5 @@ public enum FormaPagamento {
     public String toString() {
         return descricao;
     }
+
 }

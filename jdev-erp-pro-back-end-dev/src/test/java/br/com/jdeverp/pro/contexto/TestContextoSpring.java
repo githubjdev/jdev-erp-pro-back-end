@@ -10,16 +10,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.jdeverp.pro.app.JDevERPPROApplication;
 
-@TestMethodOrder(OrderAnnotation.class) /* A ordem de exeção dos testes */
+@TestMethodOrder(OrderAnnotation.class)
 @AutoConfigureMockMvc(addFilters = false)
 @TestPropertySource(locations = "classpath:application.properties")
 @SpringBootTest(classes = JDevERPPROApplication.class)
-@Transactional
+@Transactional /*Se remover o @Transaction ele commita/salva no banco senão ele reverte as operações*/
 public class TestContextoSpring {
-	
+
 	@Test
-	public void testInicial() {
-		System.out.println("Teste Funcionando");
+	public void testeInicial() {
+		System.out.println("Teste funcionando");
 	}
 
 }

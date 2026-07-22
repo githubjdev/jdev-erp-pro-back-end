@@ -37,7 +37,7 @@ import lombok.Data;
 })
 @SequenceGenerator(name = "seq_usuario", sequenceName = "seq_usuario", allocationSize = 1)
 public class Usuario implements UserDetails {
-	
+
 	private static final long serialVersionUID = 1L;
 
 	@Id
@@ -48,65 +48,71 @@ public class Usuario implements UserDetails {
 	@Column(nullable = false, unique = true)
 	private String login;
 	
-	
-	@NotBlank(message = "Senha deve ser informada informado")
+	@NotBlank(message = "Senha deve ser informado")
 	@Column(nullable = false, unique = true)
 	private String senha;
 	
-	private Boolean bloqueio = false;
+	private Boolean bloqueado = false;
+	
+	private String refreshToken;
 	
 	private String tokenSessao;
 	
-	private String refreskToken;
-	
-	@NotNull(message =  "Cliente ou Funcionário deve ser informado para cadastrar o usuário de acesso ao sistema.")
-    @OneToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "cliente_funcionario_id", 
-	       nullable = false, 
-	       foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, name = "cliente_funcionario_fk"))
-	private ClienteFuncionario clienteFuncionario;
+	@NotNull(message = "Cliente ou funcionário deve ser informado para cadastrar o usuário de acesso ao sistema")
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "cliente_funcionario_id", nullable = false, 
+	                     foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+	                           name = "cliente_funcionario_fk"))
+	private ClienteFuncionario  clienteFuncionario;
 	
 	
-    /*Irá carregar os Role de cada usuário*/
+	
+	
+	//Alex -> ROLE_ADMIN, ROLE_GERENTE
 	@ManyToMany(fetch = FetchType.LAZY)
-	@JoinTable(name = "role_usuario", 
-	          uniqueConstraints = @UniqueConstraint(name="unique_role_user",
-	          columnNames = {"acesso_id","usuario_id"}),           /*Contraint de unicidade entre usuario e acesso*/
-	                
-	          joinColumns = @JoinColumn(name="usuario_id",         /*Representa a tabela de usuário*/
-	          foreignKey = @ForeignKey(name="usuario_fk")),
-	          
-	          inverseJoinColumns = @JoinColumn(name="acesso_id",    /*Representa a tabela de Role*/
-	          foreignKey = @ForeignKey(name="acesso_fk"))
-	)
+	@JoinTable(name = "role_usuario",
+	           uniqueConstraints = @UniqueConstraint(name="unique_role_user", 
+	           columnNames = { "acesso_id", "usuario_id" }), /*Contraint de unicidade entre usuario e acesso*/
+	           
+	            joinColumns = @JoinColumn(name = "usuario_id",
+	            foreignKey = @ForeignKey(name="usuario_fk")),   /*Representa a tabela de usuário e acesso*/
+			
+	            inverseJoinColumns = @JoinColumn(name="acesso_id",
+	            foreignKey = @ForeignKey(name="acesso_fk"))
+	            
+	 )                  
 	private List<Role> acessos = new ArrayList<Role>();
 	
 	
-    @NotNull(message = "Empresa deve ser informada corretamente")
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empresa_id", 
-            nullable = false,
-            foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
-                  name = "empresa_fk"))
-    private Empresa empresa;
+	/*Refere-se ao cadastro da empresa em multitanci*/
+	@NotNull(message = "Empresa deve ser informado")
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "empresa_id", 
+	        nullable = false, 
+	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+	                                name = "empresa_fk"))
+	private Empresa empresa;
+
 
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-		return acessos;
+		return this.acessos;
 	}
+
 
 
 	@Override
 	public @Nullable String getPassword() {
-		return senha;
+		return this.senha;
 	}
+
 
 
 	@Override
 	public String getUsername() {
-		return login;
+		return this.login;
 	}
-
+	
 
 }

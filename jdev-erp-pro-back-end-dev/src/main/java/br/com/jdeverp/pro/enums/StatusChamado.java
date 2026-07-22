@@ -1,7 +1,8 @@
 package br.com.jdeverp.pro.enums;
 
 public enum StatusChamado {
-
+	
+	
     ABERTO("Aberto"),
     EM_ANALISE("Em Análise"),
     AGUARDANDO_CLIENTE("Aguardando Cliente"),
@@ -27,4 +28,5 @@ public enum StatusChamado {
     public String toString() {
         return descricao;
     }
+
 }

@@ -1,7 +1,8 @@
 package br.com.jdeverp.pro.enums;
 
 public enum TipoChamado {
-
+	
+	
 	    DUVIDA("Dúvida"),
 	    SUPORTE("Suporte"),
 	    INCIDENTE("Incidente"),
@@ -30,4 +31,6 @@ public enum TipoChamado {
 	    public String toString() {
 	        return descricao;
 	    }
+	
+
 }

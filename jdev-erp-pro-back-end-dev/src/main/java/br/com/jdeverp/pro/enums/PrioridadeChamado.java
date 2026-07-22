@@ -1,6 +1,7 @@
 package br.com.jdeverp.pro.enums;
 
 public enum PrioridadeChamado {
+	
 
 	BAIXA("Baixa"),
 	MEDIA("Média"), 
@@ -21,4 +22,5 @@ public enum PrioridadeChamado {
 	public String toString() {
 		return descricao;
 	}
+
 }

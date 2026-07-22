@@ -33,9 +33,10 @@ public class Empresa {
 	private Long id;
 
 	@NotNull(message = "Plano deve ser informado")
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne(fetch = FetchType.LAZY) /* LAZY -> Carrega o plano quando tiver necessidade */
 	@JoinColumn(name = "plano_id", nullable = false, 
-	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, name = "plano_fk"))
+	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
+	            name = "plano_fk"))
 	private Plano plano;
 
 	@Column(nullable = true)
@@ -55,15 +56,11 @@ public class Empresa {
 
 	@Column(nullable = true)
 	private LocalDate vigenciaPlano;
-	
-	@NotNull(message =  "Pessoa deve ser informada para cadastrar a instituição juridíca (PJ)")
-    @OneToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "pessoa_id", 
-	       nullable = false, 
-	       foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, name = "pessoa_fk"))
-	private Pessoa pessoa;
-	
 
-	
+	@NotNull(message = "Pessoa deve ser informada para cadastrar a instituição juridíca (PJ)")
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "pessoa_id", nullable = false, 
+	     foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, name = "pessoa_fk"))
+	private Pessoa pessoa;
 
 }
