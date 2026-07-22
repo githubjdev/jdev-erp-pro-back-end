@@ -11,7 +11,7 @@ import br.com.jdeverp.pro.contexto.TestContextoSpring;
 import br.com.jdeverp.pro.model.Categoria;
 import br.com.jdeverp.pro.model.Empresa;
 
-public class TesteCategoriaRepository extends TestContextoSpring {
+public class TestCategoriaRepository extends TestContextoSpring {
 
 	@Autowired
 	private CategoriaRepository categoriaRepository;
