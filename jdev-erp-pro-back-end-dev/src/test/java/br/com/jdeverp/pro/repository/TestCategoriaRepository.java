@@ -6,6 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import br.com.jdeverp.pro.contexto.TestContextoSpring;
 import br.com.jdeverp.pro.model.Categoria;
@@ -136,5 +140,24 @@ public class TestCategoriaRepository extends TestContextoSpring {
 		assertFalse(existe);
 
 	}
+	
+	
+	@Test
+	public void testeListaPaginada() {
+		Empresa empresa = empresaRepository.findById(1L).get();
+		
+		Pageable pageable = PageRequest.of(1, 5, Sort.by(Sort.Direction.ASC,"nome"));
+		
+		Page<Categoria> page = categoriaRepository.listarPaginado(empresa.getId(), pageable);
+		
+		assertEquals("Computadores", page.getContent().get(0).getNome());
+		assertEquals("Acessórios", page.getContent().get(4).getNome());
+		assertEquals(5, page.getContent().size());
+		
+	}
+	
+	
+	
+
 
 }
