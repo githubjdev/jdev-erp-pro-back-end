@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -152,6 +153,75 @@ public class JpaJdevRepositoryImpl<T, ID extends Serializable> extends SimpleJpa
 			return false;
 		}
 	}
-
+	
+	
+	@Override
+	public void deleteAll() {
+		validar("deleteAll", "deleteByEmpresa(empresaId)");
+		super.deleteAll();
+	}
+	
+	@Override
+	public List<T> findAll() {
+		validar("findAll", "findAll(empresaId)");
+		return super.findAll();
+	}
+	
+	@Override
+	public long count() {
+		validar("findAll", "total(empresaId)");
+		return super.count();
+	}
+	
+	
+	@Override
+	public <S extends T> long count(Example<S> example) {
+		validar("findAll", "total(empresaId)");
+		return super.count(example);
+	}
+	
+	@Override
+	public void delete(T entity) {
+		validar("delete", "delete(id, empresaId)");
+		super.delete(entity);
+	}
+	
+	@Override
+	public void deleteAllInBatch() {
+		validar("deleteAllInBatch", "deleteAllInBatch(empresaId)");
+		super.deleteAllInBatch();
+	}
+	
+	@Override
+	public <S extends T> boolean exists(Example<S> example) {
+		validar("exists", "exists(empresaId)");
+		return super.exists(example);
+	}
+	
+	
+	@Override
+	public <S extends T> List<S> findAll(Example<S> example) {
+		validar("findAll", "findAll(empresaId)");
+		return super.findAll(example);
+	}
+	
+	
+	
+	@Override
+	public void deleteById(ID id) {
+		validar("deleteById", "deleteById(id, empresaId)");
+		super.deleteById(id);
+	}
+	
+	
+	
+	/**
+	 * Bloqueia métodos perigosos somente para entidades multiempresa.
+	 */
+	private void validar(String metodo, String metodoCorreto) {
+         if (possuiEmpresa()) {
+        	      throw new UnsupportedOperationException("o Método %s() não pode ser utilizado. Utilize o %s -> Motivo: A entidade %s possui relacionamento com empresa".formatted(metodo, metodoCorreto, domainClass.getSimpleName()));
+         }
+	}
 
 }

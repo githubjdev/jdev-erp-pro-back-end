@@ -156,7 +156,10 @@ public class TestCategoriaRepository extends TestContextoSpring {
 		
 	}
 	
-	
+	@Test
+	public void testDeleteAll() {
+		categoriaRepository.deleteAll();
+	}
 	
 
 

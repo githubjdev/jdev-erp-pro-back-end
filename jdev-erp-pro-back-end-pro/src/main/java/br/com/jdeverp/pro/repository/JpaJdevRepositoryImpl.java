@@ -99,16 +99,17 @@ public class JpaJdevRepositoryImpl<T, ID extends Serializable> extends SimpleJpa
 			jpql += " where empresa.id = :empresaId";
 		}
 		
+		
 		if (pageable.getSort().isSorted()) {
 			jpql += " order by ";
-			
-			 List<String> orders = new ArrayList<String>();
-			 
-			  for (Sort.Order order : pageable.getSort()) {
-		            orders.add(order.getProperty() + " " + order.getDirection().name());
-		        }
 
-			  jpql += String.join(", ", orders);
+			List<String> orders = new ArrayList<String>();
+
+			for (Sort.Order order : pageable.getSort()) {
+				orders.add(order.getProperty() + " " + order.getDirection().name());
+			}
+
+			jpql += String.join(",", orders);
 		}
 		
 		TypedQuery<T> query = entityManager.createQuery(jpql, domainClass);
