@@ -2,6 +2,7 @@ package br.com.jdeverp.pro.repository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -154,6 +155,17 @@ public class TestCategoriaRepository extends TestContextoSpring {
 		assertEquals(5, page.getContent().size());
 		
 	}
+	
+	
+	@Test
+	public void testFindAll() {
+		
+		assertThrows(UnsupportedOperationException.class, () ->{
+			categoriaRepository.findAll();
+		});
+	}
+	
+	
 	
 
 }
