@@ -27,7 +27,7 @@ import jakarta.annotation.PostConstruct;
 @EnableTransactionManagement
 @EntityScan(basePackages = "br.com.jdeverp.pro.model")
 @EnableJpaRepositories(basePackages = "br.com.jdeverp.pro.repository", 
-                          repositoryBaseClass = JpaJdevRepositoryImpl.class)
+                      repositoryBaseClass = JpaJdevRepositoryImpl.class)
 @ComponentScan(basePackages = "br.com.jdeverp.pro")
 public class JDevERPPROApplication {
 
