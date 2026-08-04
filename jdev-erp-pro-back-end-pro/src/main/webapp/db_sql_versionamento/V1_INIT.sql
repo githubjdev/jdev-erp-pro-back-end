@@ -80,35 +80,36 @@ select nextval('seq_empresa');
 SET session_replication_role = origin;
 
 
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Informática', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Eletrônicos', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Celulares', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Notebooks', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Computadores', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Monitores', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Impressoras', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Periféricos', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Acessórios', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Games', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Consoles', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Smart TV', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Áudio', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Vídeo', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Câmeras', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Redes', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Segurança', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Automação', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Ferramentas', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Construção', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Casa e Decoração', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Móveis', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Escritório', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Papelaria', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Brinquedos', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Esportes', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Moda', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Calçados', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Beleza e Saúde', 1);
+INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Alimentos e Bebidas', 1);
 
-INSERT INTO categoria (id, nome, empresa_id) VALUES
-(nextval('seq_categoria'), 'Alimentos', 1),
-(nextval('seq_categoria'), 'Bebidas', 1),
-(nextval('seq_categoria'), 'Padaria', 1),
-(nextval('seq_categoria'), 'Laticínios', 1),
-(nextval('seq_categoria'), 'Carnes', 1),
-(nextval('seq_categoria'), 'Hortifruti', 1),
-(nextval('seq_categoria'), 'Congelados', 1),
-(nextval('seq_categoria'), 'Limpeza', 1),
-(nextval('seq_categoria'), 'Higiene Pessoal', 1),
-(nextval('seq_categoria'), 'Perfumaria', 1),
-(nextval('seq_categoria'), 'Pet Shop', 1),
-(nextval('seq_categoria'), 'Papelaria', 1),
-(nextval('seq_categoria'), 'Informática', 1),
-(nextval('seq_categoria'), 'Eletrônicos', 1),
-(nextval('seq_categoria'), 'Celulares e Acessórios', 1),
-(nextval('seq_categoria'), 'Eletrodomésticos', 1),
-(nextval('seq_categoria'), 'Ferramentas', 1),
-(nextval('seq_categoria'), 'Construção', 1),
-(nextval('seq_categoria'), 'Materiais Elétricos', 1),
-(nextval('seq_categoria'), 'Materiais Hidráulicos', 1),
-(nextval('seq_categoria'), 'Móveis', 1),
-(nextval('seq_categoria'), 'Decoração', 1),
-(nextval('seq_categoria'), 'Roupas', 1),
-(nextval('seq_categoria'), 'Calçados', 1),
-(nextval('seq_categoria'), 'Esportes', 1),
-(nextval('seq_categoria'), 'Brinquedos', 1),
-(nextval('seq_categoria'), 'Automotivo', 1),
-(nextval('seq_categoria'), 'Jardinagem', 1),
-(nextval('seq_categoria'), 'Farmácia', 1),
-(nextval('seq_categoria'), 'Utilidades Domésticas', 1);
+
+CREATE EXTENSION IF NOT EXISTS unaccent;
