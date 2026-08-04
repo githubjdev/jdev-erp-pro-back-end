@@ -110,3 +110,6 @@ INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), '
 INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Calçados', 1);
 INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Beleza e Saúde', 1);
 INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Alimentos e Bebidas', 1);
+
+
+CREATE EXTENSION IF NOT EXISTS unaccent;
