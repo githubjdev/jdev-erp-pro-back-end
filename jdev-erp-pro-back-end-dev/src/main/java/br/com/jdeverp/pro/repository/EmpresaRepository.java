@@ -17,7 +17,9 @@ public interface EmpresaRepository extends JpaJdevRepository<Empresa, Long> {
 	
 	@Query("select c from Empresa c ")
 	List<Empresa> findAll();
-
+	
+	@Query("select c from Empresa c where c.id = :id")
+	Empresa buscarPorId(@Param("id") Long id);
 
 	/*Busca as empresas por partes ou nome (pessoa.nome) completo passado por parametro*/
 	@Query("select e from Empresa e where unaccent(upper(trim(e.pessoa.nome))) "
