@@ -26,7 +26,7 @@ import lombok.Data;
 @Entity
 @Table(name = "movimentacao_produto")
 @SequenceGenerator(name = "seq_movimentacao_produto", sequenceName = "seq_movimentacao_produto", allocationSize = 1, initialValue = 1)
-public class MovimentacaProduto {
+public class MovimentacaoProduto {
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_movimentacao_produto")
