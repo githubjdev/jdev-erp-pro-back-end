@@ -97,8 +97,68 @@ public class MensagemService {
 		return mensagemRepository.existePorConteudoDiferenteIdByChamado(id, conteudo, idChamado, idEmpresa);
 	}
 
+	public long countByChamado(Long idChamado, Long idEmpresa) {
+		return mensagemRepository.countByChamado(idChamado, idEmpresa);
+	}
+
+	public void deleteAllByChamado(Long idChamado, Long idEmpresa) {
+		mensagemRepository.deleteAllByChamado(idChamado, idEmpresa);
+	}
+
 	public void deleteByIdAndChamado(Long id, Long idChamado, Long idEmpresa) {
 		mensagemRepository.deleteByIdAndChamado(id, idChamado, idEmpresa);
+	}
+
+	// ====================Métodos para Status de Leitura====================
+
+	public List<Mensagem> findAllNaoLidas(Long idEmpresa) {
+		return mensagemRepository.findAllNaoLidas(idEmpresa);
+	}
+
+	public List<Mensagem> findAllNaoLidasByChamado(Long idChamado, Long idEmpresa) {
+		return mensagemRepository.findAllNaoLidasByChamado(idChamado, idEmpresa);
+	}
+
+	public long countNaoLidasByChamado(Long idChamado, Long idEmpresa) {
+		return mensagemRepository.countNaoLidasByChamado(idChamado, idEmpresa);
+	}
+
+	public void updateLida(Long id, Boolean lida, Long idEmpresa) {
+		mensagemRepository.updateLida(id, lida, idEmpresa);
+	}
+
+	// ====================Métodos para Atendente====================
+
+	public List<Mensagem> findAllByAtendente(Long idAtendente, Long idEmpresa) {
+		return mensagemRepository.findAllByAtendente(idAtendente, idEmpresa);
+	}
+
+	public long countByAtendente(Long idAtendente, Long idEmpresa) {
+		return mensagemRepository.countByAtendente(idAtendente, idEmpresa);
+	}
+
+	// ====================Métodos para Cliente====================
+
+	public List<Mensagem> findAllByCliente(Long idCliente, Long idEmpresa) {
+		return mensagemRepository.findAllByCliente(idCliente, idEmpresa);
+	}
+
+	public long countByCliente(Long idCliente, Long idEmpresa) {
+		return mensagemRepository.countByCliente(idCliente, idEmpresa);
+	}
+
+	// ====================Métodos Combinados====================
+
+	public List<Mensagem> findAllByChamadoAndAtendente(Long idChamado, Long idAtendente, Long idEmpresa) {
+		return mensagemRepository.findAllByChamadoAndAtendente(idChamado, idAtendente, idEmpresa);
+	}
+
+	public List<Mensagem> findAllNaoLidasByAtendente(Long idAtendente, Long idEmpresa) {
+		return mensagemRepository.findAllNaoLidasByAtendente(idAtendente, idEmpresa);
+	}
+
+	public List<Mensagem> findAllNaoLidasByCliente(Long idCliente, Long idEmpresa) {
+		return mensagemRepository.findAllNaoLidasByCliente(idCliente, idEmpresa);
 	}
 
 	// ====================dentro dos métodos do
