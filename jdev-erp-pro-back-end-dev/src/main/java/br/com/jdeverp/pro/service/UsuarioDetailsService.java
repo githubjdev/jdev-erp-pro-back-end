@@ -10,21 +10,21 @@ import br.com.jdeverp.pro.model.Usuario;
 import br.com.jdeverp.pro.repository.UsuarioRepository;
 
 @Service
-public class UsuarioDetailsService implements UserDetailsService  {
-	
+public class UsuarioDetailsService implements UserDetailsService {
+
 	@Autowired
 	private UsuarioRepository usuarioRepository;
 
-	@Override
+	@Override 
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-		
+
 		Usuario usuario = usuarioRepository.buscaPorLogin(username);
-		
-		if(usuario != null) {
+
+		if (usuario == null) {
 			throw new UsernameNotFoundException("Usuário não encontrado no banco de dados.");
 		}
-		
-		return usuario;
+
+		return usuario; 
 	}
 
 }

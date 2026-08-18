@@ -113,3 +113,23 @@ INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), '
 
 
 CREATE EXTENSION IF NOT EXISTS unaccent;
+
+
+INSERT INTO public.role(
+	id, acesso)
+	VALUES (1, 'ROLE_USER');
+
+select nextval('seq_role');
+
+
+INSERT INTO public.role(
+	id, acesso)
+	VALUES (2, 'ROLE_ADMIN');
+
+select nextval('seq_role');
+
+
+
+ALTER TABLE cliente_funcionario
+    ALTER COLUMN usuario_id DROP NOT NULL;
+	

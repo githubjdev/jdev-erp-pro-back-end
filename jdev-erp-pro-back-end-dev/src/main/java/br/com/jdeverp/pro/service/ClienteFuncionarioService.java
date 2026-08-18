@@ -25,6 +25,11 @@ public class ClienteFuncionarioService {
 	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
 	@PersistenceContext
 	private EntityManager entityManager;
+	
+	
+	public ClienteFuncionario salvar(ClienteFuncionario clienteFuncionario ) {
+		return clienteFuncionarioRepository.saveAndFlush(clienteFuncionario);
+	} 
 
 	public List<ClienteFuncionario> findAll(Long idEmpresa) {
 		
@@ -77,6 +82,11 @@ public class ClienteFuncionarioService {
 
 	public Page<ClienteFuncionario> listarPaginado(Long empresaId, Pageable pageable) {
 		return clienteFuncionarioRepository.listarPaginado(empresaId, pageable);
+	}
+	
+	
+	public ClienteFuncionario findByPessoa(Long idPessoa, Long idEmpresa) {
+		return clienteFuncionarioRepository.findByPessoa(idPessoa, idEmpresa);
 	}
 
 	// ====================dentro dos métodos do

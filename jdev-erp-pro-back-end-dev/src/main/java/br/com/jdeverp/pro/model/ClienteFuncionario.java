@@ -43,7 +43,7 @@ public class ClienteFuncionario {
 	@NotNull(message = "O usuário deve ser informado para criar o cadastro")
 	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "usuario_id", 
-    			nullable = false, 
+    			nullable = true, 
     			foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
              name = "usuario_fk"))
 	private Usuario usuario;
