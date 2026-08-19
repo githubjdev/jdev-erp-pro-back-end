@@ -47,6 +47,8 @@ public class JwtFilter extends OncePerRequestFilter {
 				return;
 			}
 			
+			
+			/*Token pode esar inválido mas o user pode acessar a parte de login*/
 			String token = header.substring(7);
 			
 			if (token.isBlank()) {
