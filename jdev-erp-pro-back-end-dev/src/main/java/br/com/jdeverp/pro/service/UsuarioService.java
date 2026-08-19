@@ -76,7 +76,7 @@ public class UsuarioService {
 		
 		String token = jwtService.gerarToken(usuario);
 		
-		usuarioRepository.updateTokenSessaoLogin(usuario.getId(), token);
+		usuarioRepository.updateTokenSessaoLogin(usuario.getId(), token, usuarioLogadoService.getEmpresaIdLogada());
 		
 		return new TokenDTO(token);
 		
