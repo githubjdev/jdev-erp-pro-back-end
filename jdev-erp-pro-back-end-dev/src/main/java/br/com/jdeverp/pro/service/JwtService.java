@@ -22,7 +22,7 @@ public class JwtService {
 	private String secret;
 
 	@Value("${jwt.expiration}")
-	private String expiration;
+	private Long expiration;
 
 	/**
 	 * Retorna a chave secreta para assinatura do token JWT.

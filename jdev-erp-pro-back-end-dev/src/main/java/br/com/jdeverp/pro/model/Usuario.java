@@ -54,8 +54,10 @@ public class Usuario implements UserDetails {
 	
 	private Boolean bloqueado = false;
 	
+	@Column(columnDefinition = "text")
 	private String refreshToken;
 	
+	@Column(columnDefinition = "text")
 	private String tokenSessao;
 	
 	@NotNull(message = "Cliente ou funcionário deve ser informado para cadastrar o usuário de acesso ao sistema")
