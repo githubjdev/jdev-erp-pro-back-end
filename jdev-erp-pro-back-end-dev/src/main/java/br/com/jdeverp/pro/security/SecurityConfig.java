@@ -35,6 +35,7 @@ public class SecurityConfig {
 	@Autowired
 	private JwtFilter jwtFilter;
 	
+	@SuppressWarnings("unused")
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		
