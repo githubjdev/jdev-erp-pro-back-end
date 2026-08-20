@@ -113,3 +113,63 @@ INSERT INTO categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), '
 
 
 CREATE EXTENSION IF NOT EXISTS unaccent;
+
+
+INSERT INTO public.role(
+	id, acesso)
+	VALUES (1, 'ROLE_USER');
+
+select nextval('seq_role');
+
+
+INSERT INTO public.role(
+	id, acesso)
+	VALUES (2, 'ROLE_ADMIN');
+
+select nextval('seq_role');
+
+
+
+ALTER TABLE cliente_funcionario
+    ALTER COLUMN usuario_id DROP NOT NULL;
+    
+    
+    
+ 
+INSERT INTO public.cliente_funcionario(
+	id, 
+	tipo_cliente_funcionario, 
+	empresa_id, 
+	pessoa_id,
+	usuario_id)
+	VALUES (1, 'FUNCIONARIO', 1, 1, null);
+
+select nextval('seq_cliente_funcionario');
+
+
+/*Senha de teste: &164Al# */
+INSERT INTO public.usuario(
+	id,
+	bloqueado, 
+	login, 
+	refresh_token, 
+	senha, 
+	token_sessao, 
+	cliente_funcionario_id, 
+	empresa_id)
+	VALUES (1, false, 'alex.fernando.egidio@gmail.com', '', '$2a$10$IR1YyIRLugk3QwPC/RQMz.oF2XEttkg9XRRwZlQJGHG90T/vP7vve', '', 1, 1);
+	
+	select nextval('seq_usuario');
+	
+	
+	update cliente_funcionario SET usuario_id = 1 where id =1;
+	
+	
+ALTER TABLE IF EXISTS public.usuario
+    ALTER COLUMN refresh_token TYPE TEXT,
+    ALTER COLUMN token_sessao TYPE TEXT;	
+
+	
+	
+   
+	
