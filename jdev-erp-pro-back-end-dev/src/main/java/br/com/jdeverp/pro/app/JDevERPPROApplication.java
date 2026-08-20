@@ -4,6 +4,7 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
@@ -15,6 +16,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import br.com.jdeverp.pro.repository.JpaJdevRepositoryImpl;
@@ -30,6 +32,9 @@ import jakarta.annotation.PostConstruct;
                       repositoryBaseClass = JpaJdevRepositoryImpl.class)
 @ComponentScan(basePackages = "br.com.jdeverp.pro")
 public class JDevERPPROApplication {
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
 
 	void main(String[] args) {
 		SpringApplication app = new SpringApplication(JDevERPPROApplication.class);
@@ -49,6 +54,8 @@ public class JDevERPPROApplication {
 		TimeZone sp = TimeZone.getTimeZone("America/Sao_Paulo");
 		TimeZone.setDefault(sp);
 		Calendar.getInstance().setTimeZone(sp);
+		
+		//System.out.println("Senha padrão: --------> " + passwordEncoder.encode("&164Al#"));
 	}
 
 }
