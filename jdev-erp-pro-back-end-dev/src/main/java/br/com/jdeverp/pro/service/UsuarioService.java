@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -63,13 +64,13 @@ public class UsuarioService {
 		Usuario usuario = buscaPorLogin(dto.getLogin());
 		
 		if(usuario == null) {
-			throw new MsgApiException("Usuário não encontrado.");
+			throw new MsgApiException("Usuário não encontrado.", HttpStatus.UNAUTHORIZED);
 		}
 		
 		boolean senhaValida = passwordEncoder.matches(dto.getSenha(), usuario.getSenha());
 		
 		if(!senhaValida) {
-			throw new MsgApiException("Senha digitada é inválida.");
+			throw new MsgApiException("Senha digitada é inválida.", HttpStatus.UNAUTHORIZED);
 		}
 		
 		authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(dto.getLogin(), dto.getSenha()));
