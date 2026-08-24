@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -26,10 +28,13 @@ import jakarta.validation.ConstraintViolationException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 	
+	private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+	
 	@ExceptionHandler(MsgApiException.class)
 	public ResponseEntity<ResponseApi> erroGeralMsgApiException(MsgApiException ex,  
 			HttpServletRequest request ){
 		
+		logException(ex, request);
 		
 		ResponseApi responseApi = new ResponseApi(new Date(),
 												ex.getStatus().value(), 
@@ -49,6 +54,7 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ResponseApi> erroUserNaoEncontradoException(UsernameNotFoundException ex,  
 			HttpServletRequest request ){
 		
+		logException(ex, request);
 		
 		ResponseApi responseApi = new ResponseApi(new Date(),
 												HttpStatus.UNAUTHORIZED.value(), 
@@ -68,6 +74,8 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
 	public ResponseEntity<ResponseApi> erroGeralRuntime(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
 
+		logException(ex, request);
+		
 		ResponseApi responseApi = new ResponseApi(new Date(),
 										HttpStatus.METHOD_NOT_ALLOWED.value(),
 				                        "Erro de chamada ao método",
@@ -85,6 +93,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(NoHandlerFoundException.class)
 	public ResponseEntity<ResponseApi> handlerNotFound(NoHandlerFoundException ex, HttpServletRequest request) {
 		
+		logException(ex, request);
 		
 		ResponseApi responseApi = new ResponseApi(new Date(),
 				                                  HttpStatus.NOT_FOUND.value(),
@@ -102,7 +111,8 @@ public class GlobalExceptionHandler {
 	
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<ResponseApi> tratarDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
-
+		logException(ex, request);
+		
 		ResponseApi responseApi = new ResponseApi(new Date(),
 												HttpStatus.BAD_REQUEST.value(),
 				                             	"Erro de integridade de dados.", 
@@ -117,6 +127,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(MissingServletRequestParameterException.class)
 	public ResponseEntity<ResponseApi> erroGeralRuntime(MissingServletRequestParameterException ex, HttpServletRequest request) {
 		
+		logException(ex, request);
 		
 		ResponseApi responseApi = new ResponseApi(new Date(),
 												  HttpStatus.BAD_REQUEST.value(),
@@ -132,7 +143,8 @@ public class GlobalExceptionHandler {
 	/* Para erro que não estamos esperando RuntimeException*/
 	@ExceptionHandler(HttpMessageNotReadableException.class)
 	public ResponseEntity<ResponseApi> erroGeralRuntime(HttpMessageNotReadableException ex, HttpServletRequest request) {
-
+		logException(ex, request);
+		
 		StringBuilder msgErro = new StringBuilder();
 
 		if (ex.getMessage().startsWith("Required request body is missing")) {
@@ -152,7 +164,7 @@ public class GlobalExceptionHandler {
 	
 	@ExceptionHandler(ObjectOptimisticLockingFailureException.class)
 	public ResponseEntity<ResponseApi> lockVersion(ObjectOptimisticLockingFailureException  ex, HttpServletRequest request) {
-		
+		logException(ex, request);
 		
 		ResponseApi responseApi = new ResponseApi(new Date(), HttpStatus.BAD_REQUEST.value(),
 	              "Uma outra atualização foi identificada pelo sistema para esse cadastro.", 
@@ -165,7 +177,7 @@ public class GlobalExceptionHandler {
 	
 	@ExceptionHandler({RuntimeException.class, Exception.class})
 	public ResponseEntity<ResponseApi> erroGeralRuntime(RuntimeException ex, HttpServletRequest request) {
-		
+		logException(ex, request);
 		
 		ResponseApi responseApi = new ResponseApi(new Date(),HttpStatus.INTERNAL_SERVER_ERROR.value(),
 								                 "Erro geral ocorrido no sistema.", 
@@ -193,6 +205,8 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ResponseApi> methodArgumentNotValidException(MethodArgumentNotValidException ex, HttpServletRequest request) {
 
+		logException(ex, request);
+		
 		List<String> lista = new ArrayList<String>();
 
 		for (ObjectError erro : ex.getAllErrors()) {
@@ -208,6 +222,9 @@ public class GlobalExceptionHandler {
 	}
 	
 	
+	private void logException(Exception ex, HttpServletRequest request) {
+		log.error("Erro [{} {}] - {}", request.getMethod(), request.getRequestURI(), ex.getMessage(), ex);
+	}
 	
 	
 
