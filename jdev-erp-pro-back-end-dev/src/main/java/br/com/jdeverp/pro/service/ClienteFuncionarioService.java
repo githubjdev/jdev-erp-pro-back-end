@@ -88,6 +88,10 @@ public class ClienteFuncionarioService {
 	public ClienteFuncionario findByPessoa(Long idPessoa, Long idEmpresa) {
 		return clienteFuncionarioRepository.findByPessoa(idPessoa, idEmpresa);
 	}
+	
+	public void removeUserClienteFuncionarioId(Long idUser, Long idEmpresa) {
+		clienteFuncionarioRepository.removeUserClienteFuncionarioId(idUser, idEmpresa);
+	}
 
 	// ====================dentro dos métodos do
 	// service===============================
