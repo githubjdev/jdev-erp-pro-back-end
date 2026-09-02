@@ -26,6 +26,7 @@ public class UsuarioDetailsService implements UserDetailsService {
 			throw new UsernameNotFoundException("Usuário não encontrado no banco de dados.");
 		}
 		
+		
 		if(!usuario.isEnabled()) {
 			throw new MsgApiException("Usuário bloqueado, entre em contato com o administrador do sistema.", HttpStatus.UNAUTHORIZED);
 		}

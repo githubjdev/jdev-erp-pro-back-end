@@ -30,6 +30,24 @@ public class UsuarioController {
 	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
 	
+	
+	@PostMapping("/salvar")
+	public ResponseEntity<UsuarioDto> salvar(@RequestBody @Valid UsuarioDto usuarioDto){
+		
+		UsuarioDto usuarioSalvo = usuarioService.salvar(usuarioDto);
+		
+		return ResponseEntity.ok(usuarioSalvo);
+	}
+	
+	@PostMapping("/atualizar")
+	public ResponseEntity<UsuarioDto> atualizar(@RequestBody @Valid UsuarioDto usuarioDto){
+		
+		UsuarioDto usuarioSalvo = usuarioService.atualizar(usuarioDto);
+		
+		return ResponseEntity.ok(usuarioSalvo);
+	}
+	
+	
 	/*Ponto de acesso (end-point): /api/usuario/login */
 	@PostMapping("/login")
 	public ResponseEntity<TokenDTO> login(@RequestBody  @Valid LoginDTO login){
@@ -41,17 +59,21 @@ public class UsuarioController {
 	
 	
 	@GetMapping("/listar")
-	public ResponseEntity<List<UsuarioDto>> listar(){
+	public ResponseEntity<List<UsuarioDto>> listarUsuarios(){
+		
 		return ResponseEntity.ok(usuarioService.listar(usuarioLogadoService.getEmpresaIdLogada()));
 	}
 	
+	
 	@GetMapping("/buscarPorId/{id}")
 	public ResponseEntity<UsuarioDto> buscarPorId(@PathVariable(required = true, value = "id") Long idUser){
-		return ResponseEntity.ok(usuarioService.buscarPorId(idUser, usuarioLogadoService.getEmpresaIdLogada()));
+		return ResponseEntity.ok(usuarioService.buscarPorIdDto(idUser, usuarioLogadoService.getEmpresaIdLogada()));
 	}
 	
-	@DeleteMapping("/deleteById/{id}")
-	public ResponseEntity<String> deleteById(@PathVariable(required = true, value = "id") Long idUser){
+	
+	@DeleteMapping("/deletar/{id}")
+	public ResponseEntity<String> deletePorId(@PathVariable(required = true, value = "id") Long idUser){
+		
 		usuarioService.deleteById(idUser, usuarioLogadoService.getEmpresaIdLogada());
 		
 		return ResponseEntity.ok("Usuário deletado com sucesso!");

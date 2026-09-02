@@ -41,8 +41,8 @@ public interface UsuarioRepository extends JpaJdevRepository<Usuario, Long> {
 	
 	
 	@Query("select count(u.id) > 0 from Usuario u where u.empresa.id = :idEmpresa "
-			+ " and u.clienteFuncionario.pessoa.id =: idPessoa")
-	boolean existePorPessoa(@Param("nome") Long idPessoa, @Param("idEmpresa") Long idEmpresa);
+			+ " and u.clienteFuncionario.pessoa.id = :idPessoa")
+	boolean existePorPessoa(@Param("idPessoa") Long idPessoa, @Param("idEmpresa") Long idEmpresa);
 	
 	
 	@Query("select count(u.id) > 0 from Usuario u where u.empresa.id = :idEmpresa "

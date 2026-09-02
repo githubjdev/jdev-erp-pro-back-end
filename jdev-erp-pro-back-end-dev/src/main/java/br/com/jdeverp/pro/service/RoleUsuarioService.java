@@ -22,6 +22,11 @@ public class RoleUsuarioService {
 	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
 	@PersistenceContext
 	private EntityManager entityManager;
+	
+	
+	public RoleUsuario salvar(RoleUsuario roleUsuario ) {
+		return roleUsuarioRepository.saveAndFlush(roleUsuario);
+	}
 
 
 	// ====================Métodos específicos para Usuário====================

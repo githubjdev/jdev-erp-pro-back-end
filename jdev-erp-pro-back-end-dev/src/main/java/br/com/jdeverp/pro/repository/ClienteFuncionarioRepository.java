@@ -51,7 +51,7 @@ public interface ClienteFuncionarioRepository extends JpaJdevRepository<ClienteF
     
     @Transactional
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query(value = "UPDATE cliente_funcionario SET usuario_id = null where usuario_id = :id and empresa_id = :idEmpresa", nativeQuery = true)
+    @Query(value = "update cliente_funcionario set usuario_id = null where empresa_id = :idEmpresa and usuario_id = :id", nativeQuery = true)
     void removeUserClienteFuncionarioId(@Param("id") Long id, @Param("idEmpresa") Long idEmpresa);
 
 }
