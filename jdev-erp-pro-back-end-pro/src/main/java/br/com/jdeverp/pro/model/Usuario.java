@@ -8,6 +8,8 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.Entity;
@@ -44,19 +46,24 @@ public class Usuario implements UserDetails {
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_usuario")
 	private Long id;
 	
+	@JsonIgnore
 	@NotBlank(message = "Login deve ser informado")
 	@Column(nullable = false, unique = true)
 	private String login;
 	
+	@JsonIgnore
 	@NotBlank(message = "Senha deve ser informado")
 	@Column(nullable = false, unique = true)
 	private String senha;
 	
-	private Boolean bloqueado = false;
+	@JsonIgnore
+	private Boolean liberado = true;
 	
+	@JsonIgnore
 	@Column(columnDefinition = "text")
 	private String refreshToken;
 	
+	@JsonIgnore
 	@Column(columnDefinition = "text")
 	private String tokenSessao;
 	
@@ -71,7 +78,8 @@ public class Usuario implements UserDetails {
 	
 	
 	//Alex -> ROLE_ADMIN, ROLE_GERENTE
-	@ManyToMany(fetch = FetchType.LAZY)
+	@JsonIgnore
+	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(name = "role_usuario",
 	           uniqueConstraints = @UniqueConstraint(name="unique_role_user", 
 	           columnNames = { "acesso_id", "usuario_id" }), /*Contraint de unicidade entre usuario e acesso*/
@@ -88,7 +96,7 @@ public class Usuario implements UserDetails {
 	
 	/*Refere-se ao cadastro da empresa em multitanci*/
 	@NotNull(message = "Empresa deve ser informado")
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "empresa_id", 
 	        nullable = false, 
 	      foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
@@ -96,24 +104,57 @@ public class Usuario implements UserDetails {
 	private Empresa empresa;
 
 
-
+	@JsonIgnore
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
 		return this.acessos;
 	}
 
 
-
+	@JsonIgnore
 	@Override
 	public @Nullable String getPassword() {
 		return this.senha;
 	}
 
 
-
 	@Override
 	public String getUsername() {
 		return this.login;
+	}
+	
+	@JsonIgnore
+	@Override
+	public boolean isEnabled() {
+		return liberado;
+	}
+	
+	@JsonIgnore
+	@Override
+	public boolean isAccountNonExpired() {
+		return true;
+	}
+	
+	@JsonIgnore
+	@Override
+	public boolean isAccountNonLocked() {
+		return true;
+	}
+	
+	@JsonIgnore
+	@Override
+	public boolean isCredentialsNonExpired() {
+		return true;
+	}
+	
+	
+	public boolean idAdmin() {
+		
+		if(this.acessos == null || this.acessos.isEmpty()) {
+			return false;
+		}
+		
+		return this.acessos.stream().anyMatch(a -> a.getAcesso().equals("ROLE_ADMIN"));
 	}
 	
 

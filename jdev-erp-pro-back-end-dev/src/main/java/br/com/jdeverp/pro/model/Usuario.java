@@ -52,13 +52,14 @@ public class Usuario implements UserDetails {
 	@Column(nullable = false, unique = true)
 	private String senha;
 	
-	private Boolean bloqueado = false;
+	private Boolean liberado = false;
 	
 	@Column(columnDefinition = "text")
 	private String refreshToken;
 	
 	@Column(columnDefinition = "text")
 	private String tokenSessao;
+	
 	
 	@NotNull(message = "Cliente ou funcionário deve ser informado para cadastrar o usuário de acesso ao sistema")
 	@OneToOne(fetch = FetchType.LAZY)
@@ -71,7 +72,7 @@ public class Usuario implements UserDetails {
 	
 	
 	//Alex -> ROLE_ADMIN, ROLE_GERENTE
-	@ManyToMany(fetch = FetchType.LAZY)
+	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(name = "role_usuario",
 	           uniqueConstraints = @UniqueConstraint(name="unique_role_user", 
 	           columnNames = { "acesso_id", "usuario_id" }), /*Contraint de unicidade entre usuario e acesso*/
@@ -114,6 +115,11 @@ public class Usuario implements UserDetails {
 	@Override
 	public String getUsername() {
 		return this.login;
+	}
+	
+	@Override
+	public boolean isEnabled() {
+		return liberado;
 	}
 	
 

@@ -48,5 +48,10 @@ public interface ClienteFuncionarioRepository extends JpaJdevRepository<ClienteF
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from ClienteFuncionario c where c.empresa.id = :idEmpresa and c.id = :id")
     void deleteById(@Param("id") Long id, @Param("idEmpresa") Long idEmpresa);
+    
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "update cliente_funcionario set usuario_id = null where empresa_id = :idEmpresa and usuario_id = :id", nativeQuery = true)
+    void removeUserClienteFuncionarioId(@Param("id") Long id, @Param("idEmpresa") Long idEmpresa);
 
 }

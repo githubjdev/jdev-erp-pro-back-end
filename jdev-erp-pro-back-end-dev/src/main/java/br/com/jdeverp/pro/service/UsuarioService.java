@@ -1,5 +1,6 @@
 package br.com.jdeverp.pro.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import br.com.jdeverp.pro.dto.AlterarSenhaDTO;
 import br.com.jdeverp.pro.dto.LoginDTO;
 import br.com.jdeverp.pro.dto.TokenDTO;
+import br.com.jdeverp.pro.dto.UsuarioDto;
 import br.com.jdeverp.pro.exception.MsgApiException;
 import br.com.jdeverp.pro.model.ClienteFuncionario;
 import br.com.jdeverp.pro.model.Role;
@@ -65,6 +67,14 @@ public class UsuarioService {
 		
 		if(usuario == null) {
 			throw new MsgApiException("Usuário não encontrado.", HttpStatus.UNAUTHORIZED);
+		}
+		
+		if(!usuario.isEnabled()) {
+			throw new MsgApiException("Usuário bloqueado, entre em contato com o administrador do sistema.", HttpStatus.UNAUTHORIZED);
+		}
+		
+		if(usuario.getEmpresa().getBloqueio()) {
+			throw new MsgApiException("Empresa bloqueada, entre em contato com o administrador do sistema.", HttpStatus.UNAUTHORIZED);
 		}
 		
 		boolean senhaValida = passwordEncoder.matches(dto.getSenha(), usuario.getSenha());
@@ -124,7 +134,7 @@ public class UsuarioService {
 			throw new MsgApiException("Existe outro usuário associado a pessoa que foi selecionada.");
 		}
 		
-		Usuario usuarioBanco = buscarPorId(usuario.getId(), usuarioLogadoService.getEmpresaIdLogada()).get();
+		Usuario usuarioBanco = buscarUserPorId(usuario.getId(), usuarioLogadoService.getEmpresaIdLogada());
 		
 		if (usuario.getAcessos() == null || usuario.getAcessos().isEmpty()) {
 			usuario.setAcessos(usuarioBanco.getAcessos());
@@ -193,6 +203,15 @@ public class UsuarioService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
+		
+		 Optional<Usuario> optional = usuarioRepository.buscarPorId(id, idEmpresa);
+		
+		 if (!optional.isPresent()) {
+			 throw new MsgApiException("Usuário não encontrado para deletar.");
+		 }
+		
+		clienteFuncionarioService.removeUserClienteFuncionarioId(id, idEmpresa);
+		
 		usuarioRepository.deleteById(id, idEmpresa);
 	}
 
@@ -212,12 +231,43 @@ public class UsuarioService {
 		return usuarioRepository.existsById(id, empresaId);
 	}
 
-	public List<Usuario> listar(Long empresaId) {
-		return usuarioRepository.listar(empresaId);
+	public List<UsuarioDto> listar(Long empresaId) {
+		
+		List<UsuarioDto> dtos = new ArrayList<UsuarioDto>();
+		List<Usuario> list = usuarioRepository.listar(empresaId);
+		
+		for (Usuario usuario : list) {
+			
+			UsuarioDto dto = new UsuarioDto();
+			dto.setBloqueado(usuario.getLiberado());
+			dto.setEmpresa(usuario.getEmpresa().getPessoa().getNomeFantasia());
+			dto.setPessoa(usuario.getClienteFuncionario().getPessoa().getNome());
+			dtos.add(dto);
+		}
+		
+		return dtos;
 	}
 
-	public Optional<Usuario> buscarPorId(Long id, Long empresaId) {
-		return usuarioRepository.buscarPorId(id, empresaId);
+	public UsuarioDto buscarPorId(Long id, Long empresaId) {
+		
+		
+		Optional<Usuario> usuario = usuarioRepository.buscarPorId(id, empresaId);
+		
+		if (!usuario.isPresent()) {
+			throw new MsgApiException("Usuário não foi encontrado na busca.");
+		}
+		
+		UsuarioDto dto = new UsuarioDto();
+		dto.setBloqueado(usuario.get().getLiberado());
+		dto.setEmpresa(usuario.get().getEmpresa().getPessoa().getNomeFantasia());
+		dto.setPessoa(usuario.get().getClienteFuncionario().getPessoa().getNome());
+		
+		return dto;
+	}
+	
+	
+	private Usuario buscarUserPorId(Long id, Long empresaId) {
+		return usuarioRepository.buscarPorId(id, empresaId).get();
 	}
 
 	public long total(Long empresaId) {
