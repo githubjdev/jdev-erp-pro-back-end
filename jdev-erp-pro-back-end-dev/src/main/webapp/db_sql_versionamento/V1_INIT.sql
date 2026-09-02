@@ -171,5 +171,7 @@ ALTER TABLE IF EXISTS public.usuario
 
 	
 	
-   
+alter table usuario DROP COLUMN bloqueado;   
+ALTER TABLE IF EXISTS public.usuario ADD COLUMN liberado boolean;
+update usuario set liberado = true; 
 	
