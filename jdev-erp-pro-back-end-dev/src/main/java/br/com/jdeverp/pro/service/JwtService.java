@@ -92,6 +92,14 @@ public class JwtService {
 		
 	}
 	
+	public Long extrairUsuarioId(String token){
+		
+		Claims claims = extrairClaims(token);
+		
+		return claims.get("usuarioId", Long.class);
+		
+	}
+	
 	/**
 	 * Extrai o ID do usuário do token JWT.
 	 *

@@ -67,10 +67,10 @@ public class JwtFilter extends OncePerRequestFilter {
 			/*Vamos fazer a autenticação se o usuário não estiver logado*/
 			if (login != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 				
+				userService.existsByTokenParaUser(token);
+				
 				/*Busca no banco o usuário*/
 				UserDetails userDetails = userService.loadUserByUsername(login);
-				
-				userService.existsByTokenSessaoAndEmpresa(token);
 				
 				/*Crie o objeto pra carregar o user*/
 				UsuarioAutenticado principal = new UsuarioAutenticado((Usuario)userDetails);

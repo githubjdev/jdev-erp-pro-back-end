@@ -35,7 +35,7 @@ public class Categoria {
 	
 	
 	/*Refere-se ao cadastro da empresa em multitanci*/
-	@NotNull(message = "Empresa deve ser informado")
+	//@NotNull(message = "Empresa deve ser informado")
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "empresa_id", 
 	        nullable = false, 
