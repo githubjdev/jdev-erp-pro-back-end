@@ -55,7 +55,7 @@ public class JDevERPPROApplication {
 		TimeZone.setDefault(sp);
 		Calendar.getInstance().setTimeZone(sp);
 		
-		//System.out.println("Senha padrão: --------> " + passwordEncoder.encode("&164Al#"));
+		System.out.println("Senha padrão: --------> " + passwordEncoder.encode("&164Al#"));
 	}
 
 }

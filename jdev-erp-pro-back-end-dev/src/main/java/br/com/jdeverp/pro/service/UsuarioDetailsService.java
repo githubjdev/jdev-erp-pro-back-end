@@ -16,7 +16,10 @@ public class UsuarioDetailsService implements UserDetailsService {
 
 	@Autowired
 	private UsuarioRepository usuarioRepository;
-
+	
+	@Autowired
+	private JwtService jwtService;
+	
 	@Override 
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
@@ -36,6 +39,18 @@ public class UsuarioDetailsService implements UserDetailsService {
 		}
 
 		return usuario; 
+	}
+	
+	public void existsByTokenSessaoAndEmpresa(String token) {
+		
+		Long idEmpresa = jwtService.extrairEmpresaId(token);
+		
+		boolean existe = usuarioRepository.existsByTokenSessaoAndEmpresa(token, idEmpresa);
+		
+		if (!existe) {
+			throw new MsgApiException("Seu token de acesso não é mais válido, realize o login novamente");	
+		}
+		
 	}
 
 }

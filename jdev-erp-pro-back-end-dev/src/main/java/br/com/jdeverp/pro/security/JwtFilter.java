@@ -70,6 +70,8 @@ public class JwtFilter extends OncePerRequestFilter {
 				/*Busca no banco o usuário*/
 				UserDetails userDetails = userService.loadUserByUsername(login);
 				
+				userService.existsByTokenSessaoAndEmpresa(token);
+				
 				/*Crie o objeto pra carregar o user*/
 				UsuarioAutenticado principal = new UsuarioAutenticado((Usuario)userDetails);
 				
