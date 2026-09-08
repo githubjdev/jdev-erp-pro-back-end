@@ -73,5 +73,19 @@ public interface UsuarioRepository extends JpaJdevRepository<Usuario, Long> {
 	@Modifying(flushAutomatically = true, clearAutomatically = true)
 	@Query("update Usuario set tokenSessao = :token where id = :id and empresa.id = :idEmpresa")
 	void updateTokenSessaoLogin(@Param("id") Long id, @Param("token") String token, @Param("idEmpresa") Long idEmpresa);
+	
+	@Query(value ="""
+			SELECT CASE
+	           WHEN COUNT(*) > 0 THEN TRUE
+	           ELSE FALSE
+	       END
+			FROM usuario u
+			WHERE u.token_sessao = :token
+			  AND u.empresa_id = :idEmpresa
+			  AND u.id = :idUsuario;
+		   """, nativeQuery = true)
+	boolean existsByTokenParaUser(@Param("token") String token,
+										 @Param("idUsuario") Long idUsuario, 
+										 @Param("idEmpresa") Long idEmpresa);
 
 }

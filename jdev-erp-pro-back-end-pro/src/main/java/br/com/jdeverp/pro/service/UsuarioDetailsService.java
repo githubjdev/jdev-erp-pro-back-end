@@ -16,6 +16,9 @@ public class UsuarioDetailsService implements UserDetailsService {
 
 	@Autowired
 	private UsuarioRepository usuarioRepository;
+	
+	@Autowired
+	private JwtService jwtService;
 
 	@Override 
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -36,6 +39,18 @@ public class UsuarioDetailsService implements UserDetailsService {
 		}
 
 		return usuario; 
+	}
+	
+	
+	public void existsByTokenParaUser(String token) {
+		Long idEmpresa= jwtService.extrairEmpresaId(token);
+		Long idUsuario  = jwtService.extrairUsuarioId(token);
+		
+		boolean existe = usuarioRepository.existsByTokenParaUser(token, idUsuario, idEmpresa);
+		
+		if(!existe) {
+			throw new MsgApiException("Usuário não autenticado ou token inválido.", HttpStatus.UNAUTHORIZED);
+		}
 	}
 
 }
