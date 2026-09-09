@@ -26,19 +26,19 @@ public class ChamadoService {
 		return chamadoRepository.findAll(idEmpresa);
 	}
 
-	List<Chamado> buscaPorTitulo(String titulo, Long idEmpresa) {
+	public List<Chamado> buscaPorTitulo(String titulo, Long idEmpresa) {
 		return chamadoRepository.buscaPorTitulo(titulo, idEmpresa);
 	}
 
-	boolean existePorTitulo(String titulo, Long idEmpresa) {
+	public boolean existePorTitulo(String titulo, Long idEmpresa) {
 		return chamadoRepository.existePorTitulo(titulo, idEmpresa);
 	}
 
-	boolean existePorTituloDiferenteId(Long id, String titulo, Long idEmpresa) {
+	public boolean existePorTituloDiferenteId(Long id, String titulo, Long idEmpresa) {
 		return chamadoRepository.existePorTituloDiferenteId(id, titulo, idEmpresa);
 	}
 
-	void deleteById(Long id, Long idEmpresa) {
+	public void deleteById(Long id, Long idEmpresa) {
 		chamadoRepository.deleteById(id, idEmpresa);
 	}
 

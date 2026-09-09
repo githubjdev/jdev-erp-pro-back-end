@@ -51,7 +51,7 @@ public class MovimentacaoProdutoService {
 		return movimentacaoProdutoRepository.deleteAll(empresaID);
 	}
 
-	void deletarAllById(Iterable<Long> ids, Long empresaId) {
+	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
 		movimentacaoProdutoRepository.deletarAllById(ids, empresaId);
 	}
 
@@ -59,7 +59,7 @@ public class MovimentacaoProdutoService {
 		return movimentacaoProdutoRepository.buscarPorIds(ids, empresaId);
 	}
 
-	boolean existsById(Long id, Long empresaId) {
+	public boolean existsById(Long id, Long empresaId) {
 		return movimentacaoProdutoRepository.existsById(id, empresaId);
 	}
 

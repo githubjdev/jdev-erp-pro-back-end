@@ -51,7 +51,7 @@ public class PedidoService {
 		return pedidoRepository.deleteAll(empresaID);
 	}
 
-	void deletarAllById(Iterable<Long> ids, Long empresaId) {
+	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
 		pedidoRepository.deletarAllById(ids, empresaId);
 	}
 
@@ -59,7 +59,7 @@ public class PedidoService {
 		return pedidoRepository.buscarPorIds(ids, empresaId);
 	}
 
-	boolean existsById(Long id, Long empresaId) {
+	public boolean existsById(Long id, Long empresaId) {
 		return pedidoRepository.existsById(id, empresaId);
 	}
 

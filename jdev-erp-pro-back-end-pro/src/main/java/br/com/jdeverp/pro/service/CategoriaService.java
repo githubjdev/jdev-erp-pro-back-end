@@ -3,6 +3,8 @@ package br.com.jdeverp.pro.service;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import br.com.jdeverp.pro.exception.MsgApiException;
@@ -79,6 +81,35 @@ public class CategoriaService {
 		}
 		
 		categoriaRepository.deleteById(id, idEmpresa);
+	}
+
+	public Categoria buscarPorId(Long id, Long idEmpresa) {
+		return categoriaRepository.buscarPorId(id, idEmpresa).orElseThrow(() -> 
+			new MsgApiException("Categoria não encontrada para a empresa logada."));
+	}
+
+	public long total(Long idEmpresa) {
+		return categoriaRepository.total(idEmpresa);
+	}
+
+	public boolean existsById(Long id, Long idEmpresa) {
+		return categoriaRepository.existsById(id, idEmpresa);
+	}
+
+	public Page<Categoria> listarPaginado(Long idEmpresa, Pageable pageable) {
+		return categoriaRepository.listarPaginado(idEmpresa, pageable);
+	}
+
+	public List<Categoria> listarPaginadoDto(Long idEmpresa, Pageable pageable) {
+		
+		Page<Categoria> categorias = categoriaRepository.listarPaginado(idEmpresa, pageable);
+		List<Categoria> listaRetorno = new java.util.ArrayList<>();
+		
+		for (Categoria categoria : categorias) {
+			listaRetorno.add(categoria);
+		}
+		
+		return listaRetorno;		
 	}
 
 }
