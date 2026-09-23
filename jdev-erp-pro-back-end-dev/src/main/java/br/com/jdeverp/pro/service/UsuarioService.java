@@ -269,7 +269,7 @@ public class UsuarioService {
 		return usuarioRepository.buscarPorIds(ids, empresaId);
 	}
 
-	boolean existsById(Long id, Long empresaId) {
+	public boolean existsById(Long id, Long empresaId) {
 		return usuarioRepository.existsById(id, empresaId);
 	}
 
@@ -346,6 +346,70 @@ public class UsuarioService {
 		
 		return dtos;		
 				
+	}
+
+	/**
+	 * Método auxiliar para converter Usuario em UsuarioDto
+	 * @param usuario
+	 * @return UsuarioDto
+	 */
+	private UsuarioDto converterParaDto(Usuario usuario) {
+		UsuarioDto dto = new UsuarioDto();
+		dto.setId(usuario.getId());
+		dto.setPessoa(usuario.getClienteFuncionario().getPessoa().getNome());
+		dto.setLiberado(usuario.isEnabled());
+		dto.setEmpresa(usuario.getEmpresa().getPessoa().getNome());
+		dto.setTipoClienteFuncionario(usuario.getClienteFuncionario().getTipoClienteFuncionario().name());
+		return dto;
+	}
+	
+	/**
+	 * Busca usuários por nome e retorna como DTO
+	 * @param nome
+	 * @param empresaId
+	 * @return List<UsuarioDto>
+	 */
+	public List<UsuarioDto> buscaPorNomeDto(String nome, Long empresaId) {
+		List<Usuario> usuarios = usuarioRepository.buscaPorNome(nome, empresaId);
+		List<UsuarioDto> dtos = new java.util.ArrayList<>();
+		
+		for (Usuario usuario : usuarios) {
+			dtos.add(converterParaDto(usuario));
+		}
+		
+		return dtos;
+	}
+	
+	/**
+	 * Busca usuário por login e retorna como DTO
+	 * @param login
+	 * @return UsuarioDto
+	 */
+	public UsuarioDto buscaPorLoginDto(String login) {
+		Usuario usuario = usuarioRepository.buscaPorLogin(login);
+		
+		if (usuario == null) {
+			return null;
+		}
+		
+		return converterParaDto(usuario);
+	}
+	
+	/**
+	 * Busca usuários por lista de IDs e retorna como DTO
+	 * @param ids
+	 * @param empresaId
+	 * @return List<UsuarioDto>
+	 */
+	public List<UsuarioDto> buscarPorIdsDto(Iterable<Long> ids, Long empresaId) {
+		List<Usuario> usuarios = usuarioRepository.buscarPorIds(ids, empresaId);
+		List<UsuarioDto> dtos = new java.util.ArrayList<>();
+		
+		for (Usuario usuario : usuarios) {
+			dtos.add(converterParaDto(usuario));
+		}
+		
+		return dtos;
 	}
 
 	// ====================dentro dos métodos do
