@@ -3,8 +3,8 @@ package br.com.jdeverp.pro.model;
 import java.time.LocalDate;
 
 import org.hibernate.validator.constraints.br.CNPJ;
-import org.hibernate.validator.constraints.br.CPF;
 import org.hibernate.validator.constraints.br.CNPJ.Format;
+import org.hibernate.validator.constraints.br.CPF;
 
 import br.com.jdeverp.pro.enums.TipoPessoa;
 import jakarta.persistence.Column;
