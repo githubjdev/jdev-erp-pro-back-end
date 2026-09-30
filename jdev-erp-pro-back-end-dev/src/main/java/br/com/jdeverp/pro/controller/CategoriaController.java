@@ -61,7 +61,12 @@ public class CategoriaController {
 		return ResponseEntity.ok(categoriaService.findAll(usuarioLogadoService.getEmpresaIdLogada()));
 	}
 	
-	
+	@GetMapping("/buscarPorId/{id}")
+	public ResponseEntity<Categoria> buscarPorId(@PathVariable Long id){
+		return ResponseEntity.ok(categoriaService.buscarPorId(id,
+				usuarioLogadoService.getEmpresaIdLogada()));
+	}
+
 	@GetMapping("/buscaPorNome/{nome}")
 	public ResponseEntity<List<Categoria>> buscaPorNome(@PathVariable String nome){
 		

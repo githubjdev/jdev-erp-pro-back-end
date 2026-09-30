@@ -57,9 +57,12 @@ public class RoleUsuarioService {
 		
 		if(roleUsuario.getId() == null){
 			throw new MsgApiException("Deve ser informado o registro para editart o acesso do usuário.");
-		} 
-		
-		
+		}
+
+		if (!roleUsuarioRepository.buscarPorIdEEmpresa(roleUsuario.getId(), usuarioLogadoService.getEmpresaIdLogada()).isPresent()) {
+			throw new MsgApiException("Registro de acesso do usuário não encontrado para a empresa logada.");
+		}
+
 		if(roleUsuario.getAcesso() == null){
 			throw new MsgApiException("Acesso deve ser informado para associar ao usuário.");
 		} 
@@ -77,9 +80,16 @@ public class RoleUsuarioService {
 		
 		
 		return roleUsuarioRepository.saveAndFlush(roleUsuario);
-		
+
 	}
-	
+
+	public List<RoleUsuario> listar() {
+		return roleUsuarioRepository.findAllByEmpresa(usuarioLogadoService.getEmpresaIdLogada());
+	}
+
+	public Optional<RoleUsuario> buscarPorId(Long id) {
+		return roleUsuarioRepository.buscarPorIdEEmpresa(id, usuarioLogadoService.getEmpresaIdLogada());
+	}
 
 
 	// ====================Métodos específicos para Usuário====================
@@ -104,7 +114,7 @@ public class RoleUsuarioService {
 
 	public void deleteById(Long id) {
 		
-		Optional<RoleUsuario> roleUsuario = roleUsuarioRepository.buscarPorId(id, usuarioLogadoService.getEmpresaIdLogada());
+		Optional<RoleUsuario> roleUsuario = roleUsuarioRepository.buscarPorIdEEmpresa(id, usuarioLogadoService.getEmpresaIdLogada());
 		
 		if (!roleUsuario.isPresent()) {
 			throw new MsgApiException("Registro de acesso já foi removido para o usuário.");

@@ -8,7 +8,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import br.com.jdeverp.pro.exception.MsgApiException;
+import br.com.jdeverp.pro.model.Categoria;
 import br.com.jdeverp.pro.model.Produto;
+import br.com.jdeverp.pro.repository.CategoriaRepository;
 import br.com.jdeverp.pro.repository.ProdutoRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -22,9 +25,54 @@ public class ProdutoService {
 	@Autowired /* Injeção de dependência */
 	private ProdutoRepository produtoRepository;
 
+	@Autowired
+	private CategoriaRepository categoriaRepository;
+
+	@Autowired
+	private UsuarioLogadoService usuarioLogadoService;
+
 	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
 	@PersistenceContext
 	private EntityManager entityManager;
+
+	public Produto salvar(Produto produto) {
+		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
+		if (produtoRepository.existePorNome(produto.getNome(), empresaId)) {
+			throw new MsgApiException("Já existe um produto com o mesmo nome para a empresa logada.");
+		}
+
+		produto.setCategoria(validarCategoria(produto.getCategoria(), empresaId));
+		produto.setEmpresa(usuarioLogadoService.getEmpresaLogada());
+		return produtoRepository.saveAndFlush(produto);
+	}
+
+	public Produto atualizar(Produto produto) {
+		if (produto.getId() == null) {
+			throw new MsgApiException("Id do produto não informado para atualizar.");
+		}
+
+		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
+		if (!produtoRepository.buscarPorId(produto.getId(), empresaId).isPresent()) {
+			throw new MsgApiException("Produto não encontrado para a empresa logada.");
+		}
+
+		if (produtoRepository.existePorNomeDiferenteId(produto.getId(), produto.getNome(), empresaId)) {
+			throw new MsgApiException("Já existe outro produto com o mesmo nome para a empresa logada.");
+		}
+
+		produto.setCategoria(validarCategoria(produto.getCategoria(), empresaId));
+		produto.setEmpresa(usuarioLogadoService.getEmpresaLogada());
+		return produtoRepository.saveAndFlush(produto);
+	}
+
+	private Categoria validarCategoria(Categoria categoria, Long empresaId) {
+		if (categoria == null || categoria.getId() == null) {
+			throw new MsgApiException("Categoria deve ser informada para o produto.");
+		}
+
+		return categoriaRepository.buscarPorId(categoria.getId(), empresaId)
+				.orElseThrow(() -> new MsgApiException("Categoria não encontrada para a empresa logada."));
+	}
 
 	public List<Produto> findAll(Long idEmpresa) {
 		
@@ -44,6 +92,11 @@ public class ProdutoService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
+
+		if (!produtoRepository.existsById(id, idEmpresa)) {
+			throw new MsgApiException("Produto não encontrado para a empresa logada, portanto não pode ser deletado.");
+		}
+
 		produtoRepository.deleteById(id, idEmpresa);
 	}
 

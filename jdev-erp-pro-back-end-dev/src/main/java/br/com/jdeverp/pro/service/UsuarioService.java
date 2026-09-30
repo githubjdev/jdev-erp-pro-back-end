@@ -174,7 +174,12 @@ public class UsuarioService {
 			throw new MsgApiException("Não foi informado o registro de pessoa/ cliente ou funcioário para o usuário.");
 		}
 		
-		Usuario usuarioBanco = buscarPorId(usuarioDto.getId(), usuarioLogadoService.getEmpresaIdLogada()).get();
+		if (usuarioDto.getId() == null) {
+			throw new MsgApiException("Id do usuário não informado para atualizar.");
+		}
+
+		Usuario usuarioBanco = buscarPorId(usuarioDto.getId(), usuarioLogadoService.getEmpresaIdLogada())
+				.orElseThrow(() -> new MsgApiException("Usuário não encontrado para a empresa logada."));
 		
 		usuarioBanco.setClienteFuncionario(clienteFuncionario);
 		usuarioBanco.setEmpresa(usuarioLogadoService.getEmpresaLogada());
@@ -253,6 +258,11 @@ public class UsuarioService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
+
+		if (!usuarioRepository.existsById(id, idEmpresa)) {
+			throw new MsgApiException("Usuário não encontrado para a empresa logada, portanto não pode ser deletado.");
+		}
+
 		clienteFuncionarioService.removeUserClienteFuncionarioId(id, idEmpresa);
 		usuarioRepository.deleteById(id, idEmpresa);
 	}

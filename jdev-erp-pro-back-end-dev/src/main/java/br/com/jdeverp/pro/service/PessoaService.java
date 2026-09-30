@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import br.com.jdeverp.pro.exception.MsgApiException;
 import br.com.jdeverp.pro.model.Pessoa;
 import br.com.jdeverp.pro.repository.PessoaRepository;
 import jakarta.persistence.EntityManager;
@@ -25,6 +26,37 @@ public class PessoaService {
 	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
 	@PersistenceContext
 	private EntityManager entityManager;
+
+	@Autowired
+	private UsuarioLogadoService usuarioLogadoService;
+
+	public Pessoa salvar(Pessoa pessoa) {
+		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
+		if (pessoaRepository.existePorNome(pessoa.getNome(), empresaId)) {
+			throw new MsgApiException("Já existe uma pessoa com o mesmo nome para a empresa logada.");
+		}
+
+		pessoa.setEmpresa(usuarioLogadoService.getEmpresaLogada());
+		return pessoaRepository.save(pessoa);
+	}
+
+	public Pessoa atualizar(Pessoa pessoa) {
+		if (pessoa.getId() == null) {
+			throw new MsgApiException("Id da pessoa não informado para atualizar.");
+		}
+
+		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
+		if (!pessoaRepository.existsById(pessoa.getId(), empresaId)) {
+			throw new MsgApiException("Pessoa não encontrada para a empresa logada.");
+		}
+
+		if (pessoaRepository.existePorNomeDiferenteId(pessoa.getId(), pessoa.getNome(), empresaId)) {
+			throw new MsgApiException("Já existe outra pessoa com o mesmo nome para a empresa logada.");
+		}
+
+		pessoa.setEmpresa(usuarioLogadoService.getEmpresaLogada());
+		return pessoaRepository.save(pessoa);
+	}
 
 	public List<Pessoa> findAll(Long idEmpresa) {
 		
@@ -44,6 +76,11 @@ public class PessoaService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
+
+		if (!pessoaRepository.existsById(id, idEmpresa)) {
+			throw new MsgApiException("Pessoa não encontrada para a empresa logada, portanto não pode ser deletada.");
+		}
+
 		pessoaRepository.deleteById(id, idEmpresa);
 	}
 

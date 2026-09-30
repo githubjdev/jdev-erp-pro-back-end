@@ -38,6 +38,18 @@ public class RoleUsuarioController {
                 return ResponseEntity.ok(roleUsuarioService.atualizar(roleUsuario));
         }
 
+        @GetMapping("/listar")
+        public ResponseEntity<List<RoleUsuario>> listar() {
+                return ResponseEntity.ok(roleUsuarioService.listar());
+        }
+
+        @GetMapping("/buscarPorId/{id}")
+        public ResponseEntity<RoleUsuario> buscarPorId(@PathVariable Long id) {
+                return roleUsuarioService.buscarPorId(id)
+                                .map(ResponseEntity::ok)
+                                .orElseGet(() -> ResponseEntity.notFound().build());
+        }
+
         @GetMapping("/listarPorUsuario/{idUsuario}")
         public ResponseEntity<List<RoleUsuario>> findAllByUsuario(@PathVariable Long idUsuario) {
                 return ResponseEntity.ok(roleUsuarioService.findAllByUsuario(idUsuario,

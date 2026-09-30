@@ -45,7 +45,11 @@ public class CategoriaService {
 		if(categoria.getId() == null) {
 			throw new MsgApiException("Id da categoria não informado para atualizar.");
 		}
-		
+
+		if (!categoriaRepository.existsById(categoria.getId(), usuarioLogadoService.getEmpresaIdLogada())) {
+			throw new MsgApiException("Categoria não encontrada para a empresa logada.");
+		}
+
 		if (this.existePorNomeDiferenteId(categoria.getId(),  categoria.getNome(), usuarioLogadoService.getEmpresaIdLogada())) {
 			throw new MsgApiException("Já existe uma categoria com o mesmo nome desta que sendo informada para atualizar, informe outro nome.");
 		}

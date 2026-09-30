@@ -1,6 +1,7 @@
 package br.com.jdeverp.pro.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -47,8 +48,11 @@ public class RoleService {
 		if (role.getId() == null) {
 			throw new MsgApiException("Id do acesso deve ser informado para edição.");
 		}
-		
-		
+
+		if (!roleRepository.existePorId(role.getId())) {
+			throw new MsgApiException("Acesso com id: " + role.getId() + " não foi encontrado.");
+		}
+
 		if (!role.getAcesso().startsWith("ROLE_")) {
 			throw new MsgApiException("Nomenclatura de acesso não contém ROLE_ no incio");
 		}
@@ -64,6 +68,10 @@ public class RoleService {
 
 	public List<Role> listar() {
 		return roleRepository.listar(usuarioLogadoService.getEmpresaIdLogada());
+	}
+
+	public Optional<Role> buscarPorId(Long id) {
+		return roleRepository.findById(id);
 	}
 
 	public List<Role> buscaPorAcesso(String acesso) {

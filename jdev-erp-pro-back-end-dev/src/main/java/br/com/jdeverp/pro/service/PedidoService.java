@@ -8,8 +8,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import br.com.jdeverp.pro.exception.MsgApiException;
 import br.com.jdeverp.pro.model.Pedido;
+import br.com.jdeverp.pro.model.Usuario;
 import br.com.jdeverp.pro.repository.PedidoRepository;
+import br.com.jdeverp.pro.repository.UsuarioRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
@@ -22,9 +25,68 @@ public class PedidoService {
 	@Autowired /* Injeção de dependência */
 	private PedidoRepository pedidoRepository;
 
+	@Autowired
+	private UsuarioRepository usuarioRepository;
+
+	@Autowired
+	private UsuarioLogadoService usuarioLogadoService;
+
 	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
 	@PersistenceContext
 	private EntityManager entityManager;
+
+	public Pedido salvar(Pedido pedido) {
+		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
+		if (pedidoRepository.existePorNumeroPedido(pedido.getNumeroPedido(), empresaId)) {
+			throw new MsgApiException("Já existe um pedido com o mesmo número para a empresa logada.");
+		}
+
+		pedido.setVendedor(validarUsuario(pedido.getVendedor(), empresaId));
+		pedido.setCliente(validarUsuario(pedido.getCliente(), empresaId));
+		pedido.setEmpresa(usuarioLogadoService.getEmpresaLogada());
+		return pedidoRepository.saveAndFlush(pedido);
+	}
+
+	public Pedido atualizar(Pedido pedido) {
+		if (pedido.getId() == null) {
+			throw new MsgApiException("Id do pedido não informado para atualizar.");
+		}
+
+		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
+		Pedido existente = pedidoRepository.buscarPorId(pedido.getId(), empresaId)
+				.orElseThrow(() -> new MsgApiException("Pedido não encontrado para a empresa logada."));
+
+		if (pedidoRepository.existePorNumeroPedidoDiferenteId(
+				pedido.getId(), pedido.getNumeroPedido(), empresaId)) {
+			throw new MsgApiException("Já existe outro pedido com o mesmo número para a empresa logada.");
+		}
+
+		existente.setNumeroPedido(pedido.getNumeroPedido());
+		existente.setStatusPedido(pedido.getStatusPedido());
+		existente.setFormaPagamento(pedido.getFormaPagamento());
+		existente.setTipoPedido(pedido.getTipoPedido());
+		existente.setDataPedido(pedido.getDataPedido());
+		existente.setDataPagamento(pedido.getDataPagamento());
+		existente.setDataCancelamento(pedido.getDataCancelamento());
+		existente.setSubTotal(pedido.getSubTotal());
+		existente.setDesconto(pedido.getDesconto());
+		existente.setFrete(pedido.getFrete());
+		existente.setTaxas(pedido.getTaxas());
+		existente.setTotal(pedido.getTotal());
+		existente.setObservacao(pedido.getObservacao());
+		existente.setVendedor(validarUsuario(pedido.getVendedor(), empresaId));
+		existente.setCliente(validarUsuario(pedido.getCliente(), empresaId));
+		return pedidoRepository.saveAndFlush(existente);
+	}
+
+	private Usuario validarUsuario(Usuario usuario, Long empresaId) {
+		if (usuario == null || usuario.getId() == null) {
+			throw new MsgApiException("Cliente e vendedor devem ser informados para o pedido.");
+		}
+
+		return usuarioRepository.buscarPorId(usuario.getId(), empresaId)
+				.orElseThrow(() -> new MsgApiException("Usuário relacionado não encontrado para a empresa logada."));
+	}
 
 	public List<Pedido> findAll(Long idEmpresa) {
 		
@@ -44,6 +106,11 @@ public class PedidoService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
+
+		if (!pedidoRepository.existsById(id, idEmpresa)) {
+			throw new MsgApiException("Pedido não encontrado para a empresa logada, portanto não pode ser deletado.");
+		}
+
 		pedidoRepository.deleteById(id, idEmpresa);
 	}
 

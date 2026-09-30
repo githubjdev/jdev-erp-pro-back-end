@@ -38,6 +38,12 @@ public class ClienteFuncionarioController {
                 return ResponseEntity.ok(clienteFuncionarioService.salvar(clienteFuncionario));
         }
 
+        @PostMapping("/atualizar")
+        public ResponseEntity<ClienteFuncionario> atualizar(
+                        @RequestBody @Valid ClienteFuncionario clienteFuncionario) {
+                return ResponseEntity.ok(clienteFuncionarioService.atualizar(clienteFuncionario));
+        }
+
         @GetMapping("/listar")
         public ResponseEntity<List<ClienteFuncionario>> listar() {
                 return ResponseEntity.ok(clienteFuncionarioService.listar(

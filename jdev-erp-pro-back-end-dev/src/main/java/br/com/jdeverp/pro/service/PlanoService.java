@@ -1,10 +1,12 @@
 package br.com.jdeverp.pro.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import br.com.jdeverp.pro.exception.MsgApiException;
 import br.com.jdeverp.pro.model.Plano;
 import br.com.jdeverp.pro.repository.PlanoRepository;
 import jakarta.persistence.EntityManager;
@@ -23,6 +25,30 @@ public class PlanoService {
 	@PersistenceContext
 	private EntityManager entityManager;
 
+	public Plano salvar(Plano plano) {
+		if (planoRepository.existePorNome(plano.getNome())) {
+			throw new MsgApiException("Já existe um plano com o mesmo nome: " + plano.getNome());
+		}
+
+		return planoRepository.save(plano);
+	}
+
+	public Plano atualizar(Plano plano) {
+		if (plano.getId() == null) {
+			throw new MsgApiException("Id do plano deve ser informado para edição.");
+		}
+
+		if (!planoRepository.findById(plano.getId()).isPresent()) {
+			throw new MsgApiException("Plano com id: " + plano.getId() + " não foi encontrado.");
+		}
+
+		if (planoRepository.existePorNomeDiferenteId(plano.getId(), plano.getNome())) {
+			throw new MsgApiException("Já existe outro plano com o mesmo nome: " + plano.getNome());
+		}
+
+		return planoRepository.save(plano);
+	}
+
 	public List<Plano> findAll() {
 		
 		return planoRepository.findAll();
@@ -30,6 +56,10 @@ public class PlanoService {
 
 	public List<Plano> buscaPorNome(String nome) {
 		return planoRepository.buscaPorNome(nome);
+	}
+
+	public Optional<Plano> buscarPorId(Long id) {
+		return planoRepository.findById(id);
 	}
 
 	public boolean existePorNome(String nome) {
@@ -41,6 +71,11 @@ public class PlanoService {
 	}
 
 	public void deleteById(Long id) {
+
+		if (!planoRepository.findById(id).isPresent()) {
+			throw new MsgApiException("Plano com id: " + id + " já foi removido do sistema.");
+		}
+
 		planoRepository.deleteById(id);
 	}
 
