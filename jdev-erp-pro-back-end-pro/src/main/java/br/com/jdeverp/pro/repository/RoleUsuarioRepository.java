@@ -29,7 +29,14 @@ public interface RoleUsuarioRepository extends JpaJdevRepository<RoleUsuario, Lo
 	
 	/*Retorna true se o usuário da empresa possui um determinado role*/
 	@Query("select count(r.id) > 0 from RoleUsuario r where r.usuario.id = :idUsuario and r.usuario.empresa.id = :idEmpresa and r.acesso.id = :idRole")
-	boolean existePorUsuarioERole(@Param("idUsuario") Long idUsuario, @Param("idRole") Long idRole, @Param("idEmpresa") Long idEmpresa);
+	public boolean existePorUsuarioERole(@Param("idUsuario") Long idUsuario, @Param("idRole") Long idRole, @Param("idEmpresa") Long idEmpresa);
+
+	@Query("select count(r.id) > 0 from RoleUsuario r where r.id <> :id and r.usuario.id = :idUsuario and r.usuario.empresa.id = :idEmpresa and r.acesso.id = :idRole")
+	public boolean existePorUsuarioDiferenreId(@Param("idUsuario") Long idUsuario,
+											 @Param("idRole") Long idRole, 
+											 @Param("id") Long id, 
+											 @Param("idEmpresa") Long idEmpresa);
+	
 	
 	/*Delete de um role do usuário da empresa*/
 	@Transactional

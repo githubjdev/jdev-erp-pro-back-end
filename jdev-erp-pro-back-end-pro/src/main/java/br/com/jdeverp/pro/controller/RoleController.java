@@ -7,11 +7,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.jdeverp.pro.model.Role;
 import br.com.jdeverp.pro.service.RoleService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/role")
@@ -19,10 +22,21 @@ public class RoleController {
 
         @Autowired
         private RoleService roleService;
+        
+        @PostMapping("/salvar")
+        public ResponseEntity<Role> salvar(@RequestBody @Valid Role role){
+        		return ResponseEntity.ok(roleService.salvar(role));
+        }
+        
+        
+        @PostMapping("/atualizar")
+        public ResponseEntity<Role> atualizar(@RequestBody @Valid Role role){
+        		return ResponseEntity.ok(roleService.atualizar(role));
+        }
 
         @GetMapping("/listar")
         public ResponseEntity<List<Role>> findAll() {
-                return ResponseEntity.ok(roleService.findAll());
+                return ResponseEntity.ok(roleService.listar());
         }
 
         @GetMapping("/buscaPorAcesso/{acesso}")

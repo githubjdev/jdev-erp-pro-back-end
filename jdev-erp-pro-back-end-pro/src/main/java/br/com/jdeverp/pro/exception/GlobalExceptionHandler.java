@@ -169,13 +169,23 @@ public class GlobalExceptionHandler {
 	}
 	
 	
-	@ExceptionHandler({RuntimeException.class, Exception.class})
-	public ResponseEntity<ResponseApi> erroGeralRuntime(RuntimeException ex, HttpServletRequest request) {
+	@ExceptionHandler({Exception.class})
+	public ResponseEntity<ResponseApi> erroGeralRuntime(Exception ex, HttpServletRequest request) {
 		
 		logException(ex, request);
+		
+		String msg = ExceptionUtil.getMensagemValidacaoConstraint(ex);
+		String msgRetorno = "";
+		
+		if (msg.contains("No static resource")) {
+			msgRetorno = "URl ou caminho não existe no Controller. " + msg;
+		}else {
+			msgRetorno = msg;
+		}
+		
 		ResponseApi responseApi = new ResponseApi(new Date(),HttpStatus.INTERNAL_SERVER_ERROR.value(),
 								                 "Erro geral ocorrido no sistema.", 
-								                 ExceptionUtil.getMensagemValidacaoConstraint(ex), 
+								                 msgRetorno, 
 								                 request.getRequestURI());
 
 		return ResponseEntity.internalServerError().contentType(MediaType.APPLICATION_JSON).body(responseApi);

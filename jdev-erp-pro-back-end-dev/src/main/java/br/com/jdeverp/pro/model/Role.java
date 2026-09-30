@@ -39,4 +39,9 @@ public class Role implements GrantedAuthority {
 		return this.acesso;
 	}
 	
+	public void setAcesso(String acesso) {
+		this.acesso = acesso != null ? acesso.toUpperCase(): "";
+	}
+	
+	
 }

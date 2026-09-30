@@ -46,5 +46,9 @@ public interface RoleRepository  extends JpaJdevRepository<Role, Long>{
 	@Modifying(flushAutomatically = true, clearAutomatically = true)
 	@Query("delete from Role r where r.id = :id")
 	void deleteById(@Param("id") Long id);
+	
+	
+	@Query("select count(r.id) > 0 from Role r where r.id = :id ")
+	boolean existePorId(@Param("id") Long id);
 
 }

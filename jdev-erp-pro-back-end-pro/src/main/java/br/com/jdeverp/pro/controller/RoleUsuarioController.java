@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import br.com.jdeverp.pro.model.RoleUsuario;
 import br.com.jdeverp.pro.service.RoleUsuarioService;
 import br.com.jdeverp.pro.service.UsuarioLogadoService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/roleUsuario")
@@ -27,8 +28,14 @@ public class RoleUsuarioController {
         private UsuarioLogadoService usuarioLogadoService;
 
         @PostMapping("/salvar")
-        public ResponseEntity<RoleUsuario> salvar(@RequestBody RoleUsuario roleUsuario) {
+        public ResponseEntity<RoleUsuario> salvar(@RequestBody @Valid RoleUsuario roleUsuario) {
                 return ResponseEntity.ok(roleUsuarioService.salvar(roleUsuario));
+        }
+        
+        
+        @PostMapping("/atualizar")
+        public ResponseEntity<RoleUsuario> atualizar(@RequestBody @Valid RoleUsuario roleUsuario) {
+                return ResponseEntity.ok(roleUsuarioService.atualizar(roleUsuario));
         }
 
         @GetMapping("/listarPorUsuario/{idUsuario}")
