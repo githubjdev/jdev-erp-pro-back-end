@@ -80,6 +80,13 @@ public class RoleUsuarioService {
 		
 	}
 	
+	public List<RoleUsuario> listar() {
+		return roleUsuarioRepository.findAllByEmpresa(usuarioLogadoService.getEmpresaIdLogada());
+	}
+
+	public Optional<RoleUsuario> buscarPorId(Long id) {
+		return roleUsuarioRepository.buscarPorIdEEmpresa(id, usuarioLogadoService.getEmpresaIdLogada());
+	}
 
 
 	// ====================Métodos específicos para Usuário====================
@@ -104,16 +111,20 @@ public class RoleUsuarioService {
 
 	public void deleteById(Long id) {
 		
-		Optional<RoleUsuario> roleUsuario = roleUsuarioRepository.buscarPorId(id, usuarioLogadoService.getEmpresaIdLogada());
+		Optional<RoleUsuario> roleUsuario = roleUsuarioRepository.buscarPorIdEEmpresa(id, usuarioLogadoService.getEmpresaIdLogada());
 		
 		if (!roleUsuario.isPresent()) {
-			throw new MsgApiException("Registro de acesso já foi removido para o usuário.");
+			throw new MsgApiException("Registro de acesso não encontrado ou já foi deletado.");
 		}
 		
 		roleUsuarioRepository.deleteById(id);
 	}
 
 	public void deleteByUsuarioAndRole(Long idUsuario, Long idRole, Long idEmpresa) {
+		if (!roleUsuarioRepository.existePorUsuarioERole(idUsuario, idRole, idEmpresa)) {
+			throw new MsgApiException("Acesso do usuário não encontrado ou já foi deletado.");
+		}
+
 		roleUsuarioRepository.deleteByUsuarioAndRole(idUsuario, idRole, idEmpresa);
 	}
 

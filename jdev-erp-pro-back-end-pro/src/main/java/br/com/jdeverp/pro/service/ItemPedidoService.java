@@ -1,5 +1,6 @@
 package br.com.jdeverp.pro.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -8,8 +9,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import br.com.jdeverp.pro.exception.MsgApiException;
 import br.com.jdeverp.pro.model.ItemPedido;
+import br.com.jdeverp.pro.model.Pedido;
+import br.com.jdeverp.pro.model.Produto;
 import br.com.jdeverp.pro.repository.ItemPedidoRepository;
+import br.com.jdeverp.pro.repository.PedidoRepository;
+import br.com.jdeverp.pro.repository.ProdutoRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
@@ -25,6 +31,73 @@ public class ItemPedidoService {
 	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
 	@PersistenceContext
 	private EntityManager entityManager;
+
+	@Autowired
+	private PedidoRepository pedidoRepository;
+
+	@Autowired
+	private ProdutoRepository produtoRepository;
+
+	@Autowired
+	private UsuarioLogadoService usuarioLogadoService;
+
+	public ItemPedido salvar(ItemPedido itemPedido) {
+		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
+		Pedido pedido = validarPedido(itemPedido.getPedido(), empresaId);
+		Produto produto = validarProduto(itemPedido.getProduto(), empresaId);
+
+		if (itemPedidoRepository.existePorNomePorPedido(produto.getNome(), pedido.getId(), empresaId)) {
+			throw new MsgApiException("O produto já foi incluído neste pedido.");
+		}
+
+		itemPedido.setPedido(pedido);
+		itemPedido.setProduto(produto);
+		itemPedido.setEmpresa(usuarioLogadoService.getEmpresaLogada());
+		return itemPedidoRepository.saveAndFlush(itemPedido);
+	}
+
+	public ItemPedido atualizar(ItemPedido itemPedido) {
+		if (itemPedido.getId() == null) {
+			throw new MsgApiException("Id do item do pedido não informado para atualizar.");
+		}
+
+		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
+		ItemPedido existente = itemPedidoRepository.buscarPorId(itemPedido.getId(), empresaId)
+				.orElseThrow(() -> new MsgApiException("Item do pedido não encontrado para a empresa logada."));
+		Pedido pedido = validarPedido(itemPedido.getPedido(), empresaId);
+		Produto produto = validarProduto(itemPedido.getProduto(), empresaId);
+
+		if (itemPedidoRepository.existePorNomeDiferenteIdPorPedido(
+				itemPedido.getId(), produto.getNome(), pedido.getId(), empresaId)) {
+			throw new MsgApiException("O produto já foi incluído neste pedido.");
+		}
+
+		existente.setQuantidade(itemPedido.getQuantidade());
+		existente.setSubTotal(itemPedido.getSubTotal());
+		existente.setDesconto(itemPedido.getDesconto());
+		existente.setTotal(itemPedido.getTotal());
+		existente.setProduto(produto);
+		existente.setPedido(pedido);
+		return itemPedidoRepository.saveAndFlush(existente);
+	}
+
+	private Pedido validarPedido(Pedido pedido, Long empresaId) {
+		if (pedido == null || pedido.getId() == null) {
+			throw new MsgApiException("Pedido deve ser informado para o item.");
+		}
+
+		return pedidoRepository.buscarPorId(pedido.getId(), empresaId)
+				.orElseThrow(() -> new MsgApiException("Pedido não encontrado para a empresa logada."));
+	}
+
+	private Produto validarProduto(Produto produto, Long empresaId) {
+		if (produto == null || produto.getId() == null) {
+			throw new MsgApiException("Produto deve ser informado para o item.");
+		}
+
+		return produtoRepository.buscarPorId(produto.getId(), empresaId)
+				.orElseThrow(() -> new MsgApiException("Produto não encontrado para a empresa logada."));
+	}
 
 	public List<ItemPedido> findAll(Long idPedido, Long idEmpresa) {
 		
@@ -44,14 +117,38 @@ public class ItemPedidoService {
 	}
 
 	public void deleteById(Long id, Long idPedido, Long idEmpresa) {
+		if (!itemPedidoRepository.buscarPorId(id, idEmpresa).filter(item -> item.getPedido() != null && item.getPedido().getId().equals(idPedido)).isPresent()) {
+			throw new MsgApiException("Item do pedido não encontrado ou já foi deletado.");
+		}
+
 		itemPedidoRepository.deleteById(id, idPedido, idEmpresa);
 	}
 
 	public long deleteAll(Long empresaID) {
+		if (itemPedidoRepository.total(empresaID) == 0) {
+			throw new MsgApiException("Nenhum item de pedido encontrado para deletar ou todos já foram deletados.");
+		}
+
 		return itemPedidoRepository.deleteAll(empresaID);
 	}
 
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		List<Long> encontrados = itemPedidoRepository.buscarPorIds(ids, empresaId).stream().map(ItemPedido::getId).toList();
+		List<Long> naoEncontrados = new ArrayList<>();
+		ids.forEach(id -> {
+			if (!encontrados.contains(id)) {
+				naoEncontrados.add(id);
+			}
+		});
+
+		if (encontrados.isEmpty() && naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Nenhum registro informado para deletar.");
+		}
+
+		if (!naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Itens de pedido não encontrados ou já deletados: " + naoEncontrados);
+		}
+
 		itemPedidoRepository.deletarAllById(ids, empresaId);
 	}
 
@@ -98,6 +195,10 @@ public class ItemPedidoService {
 	}
 
 	public void deleteByIdAndPedido(Long id, Long idPedido, Long idEmpresa) {
+		if (!itemPedidoRepository.buscarPorId(id, idEmpresa).filter(item -> item.getPedido() != null && item.getPedido().getId().equals(idPedido)).isPresent()) {
+			throw new MsgApiException("Item do pedido não encontrado ou já foi deletado.");
+		}
+
 		itemPedidoRepository.deleteByIdAndPedido(id, idPedido, idEmpresa);
 	}
 

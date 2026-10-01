@@ -148,6 +148,21 @@ public class UsuarioController {
 		return ResponseEntity.ok(existe);
 	}
 	
+
+	@GetMapping("/existe-por-nome")
+	public ResponseEntity<Boolean> existePorNome(@RequestParam(required = true) String nome){
+
+		return ResponseEntity.ok(usuarioService.existePorNome(nome, usuarioLogadoService.getEmpresaIdLogada()));
+	}
+
+
+	@GetMapping("/existe-por-nome-diferente-id/{id}")
+	public ResponseEntity<Boolean> existePorNomeDiferenteId(@PathVariable(required = true, value = "id") Long idUser,
+															@RequestParam(required = true) String nome){
+
+		return ResponseEntity.ok(usuarioService.existePorNomeDiferenteId(idUser, nome, usuarioLogadoService.getEmpresaIdLogada()));
+	}
+
 	
 	@PostMapping("/buscar-por-ids")
 	public ResponseEntity<List<UsuarioDto>> buscarPorIds(@RequestBody List<Long> ids){

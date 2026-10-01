@@ -1,5 +1,6 @@
 package br.com.jdeverp.pro.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -8,7 +9,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import br.com.jdeverp.pro.exception.MsgApiException;
+import br.com.jdeverp.pro.model.Categoria;
 import br.com.jdeverp.pro.model.Produto;
+import br.com.jdeverp.pro.repository.CategoriaRepository;
 import br.com.jdeverp.pro.repository.ProdutoRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -25,6 +29,51 @@ public class ProdutoService {
 	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
 	@PersistenceContext
 	private EntityManager entityManager;
+
+	@Autowired
+	private CategoriaRepository categoriaRepository;
+
+	@Autowired
+	private UsuarioLogadoService usuarioLogadoService;
+
+	public Produto salvar(Produto produto) {
+		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
+		if (produtoRepository.existePorNome(produto.getNome(), empresaId)) {
+			throw new MsgApiException("Já existe um produto com o mesmo nome para a empresa logada.");
+		}
+
+		produto.setCategoria(validarCategoria(produto.getCategoria(), empresaId));
+		produto.setEmpresa(usuarioLogadoService.getEmpresaLogada());
+		return produtoRepository.saveAndFlush(produto);
+	}
+
+	public Produto atualizar(Produto produto) {
+		if (produto.getId() == null) {
+			throw new MsgApiException("Id do produto não informado para atualizar.");
+		}
+
+		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
+		if (!produtoRepository.buscarPorId(produto.getId(), empresaId).isPresent()) {
+			throw new MsgApiException("Produto não encontrado para a empresa logada.");
+		}
+
+		if (produtoRepository.existePorNomeDiferenteId(produto.getId(), produto.getNome(), empresaId)) {
+			throw new MsgApiException("Já existe outro produto com o mesmo nome para a empresa logada.");
+		}
+
+		produto.setCategoria(validarCategoria(produto.getCategoria(), empresaId));
+		produto.setEmpresa(usuarioLogadoService.getEmpresaLogada());
+		return produtoRepository.saveAndFlush(produto);
+	}
+
+	private Categoria validarCategoria(Categoria categoria, Long empresaId) {
+		if (categoria == null || categoria.getId() == null) {
+			throw new MsgApiException("Categoria deve ser informada para o produto.");
+		}
+
+		return categoriaRepository.buscarPorId(categoria.getId(), empresaId)
+				.orElseThrow(() -> new MsgApiException("Categoria não encontrada para a empresa logada."));
+	}
 
 	public List<Produto> findAll(Long idEmpresa) {
 		
@@ -44,14 +93,38 @@ public class ProdutoService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
+		if (!produtoRepository.existsById(id, idEmpresa)) {
+			throw new MsgApiException("Produto não encontrado ou já foi deletado.");
+		}
+
 		produtoRepository.deleteById(id, idEmpresa);
 	}
 
 	public long deleteAll(Long empresaID) {
+		if (produtoRepository.total(empresaID) == 0) {
+			throw new MsgApiException("Nenhum produto encontrado para deletar ou todos já foram deletados.");
+		}
+
 		return produtoRepository.deleteAll(empresaID);
 	}
 
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		List<Long> encontrados = produtoRepository.buscarPorIds(ids, empresaId).stream().map(Produto::getId).toList();
+		List<Long> naoEncontrados = new ArrayList<>();
+		ids.forEach(id -> {
+			if (!encontrados.contains(id)) {
+				naoEncontrados.add(id);
+			}
+		});
+
+		if (encontrados.isEmpty() && naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Nenhum registro informado para deletar.");
+		}
+
+		if (!naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Produtos não encontrados ou já deletados: " + naoEncontrados);
+		}
+
 		produtoRepository.deletarAllById(ids, empresaId);
 	}
 

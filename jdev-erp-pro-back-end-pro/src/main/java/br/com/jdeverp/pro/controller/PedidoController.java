@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import br.com.jdeverp.pro.model.Pedido;
 import br.com.jdeverp.pro.service.PedidoService;
 import br.com.jdeverp.pro.service.UsuarioLogadoService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/pedido")
@@ -30,6 +31,16 @@ public class PedidoController {
 
         @Autowired
         private UsuarioLogadoService usuarioLogadoService;
+
+        @PostMapping("/salvar")
+        public ResponseEntity<Pedido> salvar(@RequestBody @Valid Pedido pedido) {
+                return ResponseEntity.ok(pedidoService.salvar(pedido));
+        }
+
+        @PostMapping("/atualizar")
+        public ResponseEntity<Pedido> atualizar(@RequestBody @Valid Pedido pedido) {
+                return ResponseEntity.ok(pedidoService.atualizar(pedido));
+        }
 
         @GetMapping("/listar")
         public ResponseEntity<List<Pedido>> findAll() {

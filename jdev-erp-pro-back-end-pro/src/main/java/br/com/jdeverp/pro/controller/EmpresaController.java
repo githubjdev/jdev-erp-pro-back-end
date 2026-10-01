@@ -7,11 +7,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.jdeverp.pro.model.Empresa;
 import br.com.jdeverp.pro.service.EmpresaService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/empresa")
@@ -19,6 +22,16 @@ public class EmpresaController {
 
         @Autowired
         private EmpresaService empresaService;
+
+        @PostMapping("/salvar")
+        public ResponseEntity<Empresa> salvar(@RequestBody @Valid Empresa empresa) {
+                return ResponseEntity.ok(empresaService.salvar(empresa));
+        }
+
+        @PostMapping("/atualizar")
+        public ResponseEntity<Empresa> atualizar(@RequestBody @Valid Empresa empresa) {
+                return ResponseEntity.ok(empresaService.atualizar(empresa));
+        }
 
         @GetMapping("/buscarPorId/{id}")
         public ResponseEntity<Empresa> buscarPorId(@PathVariable Long id) {

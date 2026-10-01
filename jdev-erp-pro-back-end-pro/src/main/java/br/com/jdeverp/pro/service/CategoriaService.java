@@ -65,12 +65,12 @@ public class CategoriaService {
 		return categoriaRepository.buscaPorNome(nome, idEmpresa);
 	}
 
-	boolean existePorNome(String nome, Long idEmpresa) {
+	public boolean existePorNome(String nome, Long idEmpresa) {
 
 		return categoriaRepository.existePorNome(nome, idEmpresa);
 	}
 
-	boolean existePorNomeDiferenteId(Long id, String nome, Long idEmpresa) {
+	public boolean existePorNomeDiferenteId(Long id, String nome, Long idEmpresa) {
 		return categoriaRepository.existePorNomeDiferenteId(id, nome, idEmpresa);
 	}
 

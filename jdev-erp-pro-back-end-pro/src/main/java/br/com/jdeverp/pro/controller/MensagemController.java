@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import br.com.jdeverp.pro.model.Mensagem;
 import br.com.jdeverp.pro.service.MensagemService;
 import br.com.jdeverp.pro.service.UsuarioLogadoService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/mensagem")
@@ -31,6 +32,16 @@ public class MensagemController {
 
         @Autowired
         private UsuarioLogadoService usuarioLogadoService;
+
+        @PostMapping("/salvar")
+        public ResponseEntity<Mensagem> salvar(@RequestBody @Valid Mensagem mensagem) {
+                return ResponseEntity.ok(mensagemService.salvar(mensagem));
+        }
+
+        @PostMapping("/atualizar")
+        public ResponseEntity<Mensagem> atualizar(@RequestBody @Valid Mensagem mensagem) {
+                return ResponseEntity.ok(mensagemService.atualizar(mensagem));
+        }
 
         @GetMapping("/listar")
         public ResponseEntity<List<Mensagem>> listar() {

@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import br.com.jdeverp.pro.model.Produto;
 import br.com.jdeverp.pro.service.ProdutoService;
 import br.com.jdeverp.pro.service.UsuarioLogadoService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/produto")
@@ -30,6 +31,16 @@ public class ProdutoController {
 
         @Autowired
         private UsuarioLogadoService usuarioLogadoService;
+
+        @PostMapping("/salvar")
+        public ResponseEntity<Produto> salvar(@RequestBody @Valid Produto produto) {
+                return ResponseEntity.ok(produtoService.salvar(produto));
+        }
+
+        @PostMapping("/atualizar")
+        public ResponseEntity<Produto> atualizar(@RequestBody @Valid Produto produto) {
+                return ResponseEntity.ok(produtoService.atualizar(produto));
+        }
 
         @GetMapping("/listar")
         public ResponseEntity<List<Produto>> findAll() {

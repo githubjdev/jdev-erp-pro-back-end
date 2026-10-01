@@ -39,6 +39,13 @@ public class RoleController {
                 return ResponseEntity.ok(roleService.listar());
         }
 
+        @GetMapping("/buscarPorId/{id}")
+        public ResponseEntity<Role> buscarPorId(@PathVariable Long id) {
+                return roleService.buscarPorId(id)
+                                .map(ResponseEntity::ok)
+                                .orElseGet(() -> ResponseEntity.notFound().build());
+        }
+
         @GetMapping("/buscaPorAcesso/{acesso}")
         public ResponseEntity<List<Role>> buscaPorAcesso(@PathVariable String acesso) {
                 return ResponseEntity.ok(roleService.buscaPorAcesso(acesso));
