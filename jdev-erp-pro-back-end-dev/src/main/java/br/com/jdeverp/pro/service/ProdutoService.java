@@ -1,5 +1,6 @@
 package br.com.jdeverp.pro.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,15 +26,15 @@ public class ProdutoService {
 	@Autowired /* Injeção de dependência */
 	private ProdutoRepository produtoRepository;
 
+	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
+	@PersistenceContext
+	private EntityManager entityManager;
+
 	@Autowired
 	private CategoriaRepository categoriaRepository;
 
 	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
-
-	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
-	@PersistenceContext
-	private EntityManager entityManager;
 
 	public Produto salvar(Produto produto) {
 		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
@@ -92,19 +93,38 @@ public class ProdutoService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
-
 		if (!produtoRepository.existsById(id, idEmpresa)) {
-			throw new MsgApiException("Produto não encontrado para a empresa logada, portanto não pode ser deletado.");
+			throw new MsgApiException("Produto não encontrado ou já foi deletado.");
 		}
 
 		produtoRepository.deleteById(id, idEmpresa);
 	}
 
 	public long deleteAll(Long empresaID) {
+		if (produtoRepository.total(empresaID) == 0) {
+			throw new MsgApiException("Nenhum produto encontrado para deletar ou todos já foram deletados.");
+		}
+
 		return produtoRepository.deleteAll(empresaID);
 	}
 
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		List<Long> encontrados = produtoRepository.buscarPorIds(ids, empresaId).stream().map(Produto::getId).toList();
+		List<Long> naoEncontrados = new ArrayList<>();
+		ids.forEach(id -> {
+			if (!encontrados.contains(id)) {
+				naoEncontrados.add(id);
+			}
+		});
+
+		if (encontrados.isEmpty() && naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Nenhum registro informado para deletar.");
+		}
+
+		if (!naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Produtos não encontrados ou já deletados: " + naoEncontrados);
+		}
+
 		produtoRepository.deletarAllById(ids, empresaId);
 	}
 

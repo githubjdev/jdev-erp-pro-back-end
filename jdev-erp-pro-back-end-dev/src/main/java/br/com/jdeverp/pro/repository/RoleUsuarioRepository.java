@@ -26,7 +26,7 @@ public interface RoleUsuarioRepository extends JpaJdevRepository<RoleUsuario, Lo
 	/*Busca todos os usuários da empresa que possuem um determinado role*/
 	@Query("select r from RoleUsuario r where r.acesso.id = :idRole and r.usuario.empresa.id = :idEmpresa")
 	List<RoleUsuario> findAllByRoleAndEmpresa(@Param("idRole") Long idRole, @Param("idEmpresa") Long idEmpresa);
-
+	
 
 	/*Busca todas as associações de role com usuário da empresa (RoleUsuario não possui empresa, o filtro é pelo usuário)*/
 	@Query("select r from RoleUsuario r where r.usuario.empresa.id = :idEmpresa")

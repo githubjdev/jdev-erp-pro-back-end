@@ -1,5 +1,6 @@
 package br.com.jdeverp.pro.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,6 +28,10 @@ public class ItemPedidoService {
 	@Autowired /* Injeção de dependência */
 	private ItemPedidoRepository itemPedidoRepository;
 
+	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
+	@PersistenceContext
+	private EntityManager entityManager;
+
 	@Autowired
 	private PedidoRepository pedidoRepository;
 
@@ -35,10 +40,6 @@ public class ItemPedidoService {
 
 	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
-
-	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
-	@PersistenceContext
-	private EntityManager entityManager;
 
 	public ItemPedido salvar(ItemPedido itemPedido) {
 		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
@@ -116,19 +117,38 @@ public class ItemPedidoService {
 	}
 
 	public void deleteById(Long id, Long idPedido, Long idEmpresa) {
-
-		if (!itemPedidoRepository.existsById(id, idEmpresa)) {
-			throw new MsgApiException("Item do pedido não encontrado para a empresa logada, portanto não pode ser deletado.");
+		if (!itemPedidoRepository.buscarPorId(id, idEmpresa).filter(item -> item.getPedido() != null && item.getPedido().getId().equals(idPedido)).isPresent()) {
+			throw new MsgApiException("Item do pedido não encontrado ou já foi deletado.");
 		}
 
 		itemPedidoRepository.deleteById(id, idPedido, idEmpresa);
 	}
 
 	public long deleteAll(Long empresaID) {
+		if (itemPedidoRepository.total(empresaID) == 0) {
+			throw new MsgApiException("Nenhum item de pedido encontrado para deletar ou todos já foram deletados.");
+		}
+
 		return itemPedidoRepository.deleteAll(empresaID);
 	}
 
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		List<Long> encontrados = itemPedidoRepository.buscarPorIds(ids, empresaId).stream().map(ItemPedido::getId).toList();
+		List<Long> naoEncontrados = new ArrayList<>();
+		ids.forEach(id -> {
+			if (!encontrados.contains(id)) {
+				naoEncontrados.add(id);
+			}
+		});
+
+		if (encontrados.isEmpty() && naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Nenhum registro informado para deletar.");
+		}
+
+		if (!naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Itens de pedido não encontrados ou já deletados: " + naoEncontrados);
+		}
+
 		itemPedidoRepository.deletarAllById(ids, empresaId);
 	}
 
@@ -175,6 +195,10 @@ public class ItemPedidoService {
 	}
 
 	public void deleteByIdAndPedido(Long id, Long idPedido, Long idEmpresa) {
+		if (!itemPedidoRepository.buscarPorId(id, idEmpresa).filter(item -> item.getPedido() != null && item.getPedido().getId().equals(idPedido)).isPresent()) {
+			throw new MsgApiException("Item do pedido não encontrado ou já foi deletado.");
+		}
+
 		itemPedidoRepository.deleteByIdAndPedido(id, idPedido, idEmpresa);
 	}
 

@@ -1,6 +1,7 @@
 package br.com.jdeverp.pro.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -112,19 +113,38 @@ public class MovimentacaoProdutoService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
-
 		if (!movimentacaoProdutoRepository.existsById(id, idEmpresa)) {
-			throw new MsgApiException("Movimentação de produto não encontrada para a empresa logada, portanto não pode ser deletada.");
+			throw new MsgApiException("Movimentação de produto não encontrada ou já foi deletada.");
 		}
 
 		movimentacaoProdutoRepository.deleteById(id, idEmpresa);
 	}
 
 	public long deleteAll(Long empresaID) {
+		if (movimentacaoProdutoRepository.total(empresaID) == 0) {
+			throw new MsgApiException("Nenhuma movimentação de produto encontrada para deletar ou todas já foram deletadas.");
+		}
+
 		return movimentacaoProdutoRepository.deleteAll(empresaID);
 	}
 
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		List<Long> encontrados = movimentacaoProdutoRepository.buscarPorIds(ids, empresaId).stream().map(MovimentacaoProduto::getId).toList();
+		List<Long> naoEncontrados = new ArrayList<>();
+		ids.forEach(id -> {
+			if (!encontrados.contains(id)) {
+				naoEncontrados.add(id);
+			}
+		});
+
+		if (encontrados.isEmpty() && naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Nenhum registro informado para deletar.");
+		}
+
+		if (!naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Movimentações de produto não encontradas ou já deletadas: " + naoEncontrados);
+		}
+
 		movimentacaoProdutoRepository.deletarAllById(ids, empresaId);
 	}
 
@@ -171,6 +191,10 @@ public class MovimentacaoProdutoService {
 	}
 
 	public void deleteByIdAndPedido(Long id, Long idPedido, Long idEmpresa) {
+		if (!movimentacaoProdutoRepository.buscarPorId(id, idEmpresa).filter(movimentacao -> movimentacao.getPedido() != null && movimentacao.getPedido().getId().equals(idPedido)).isPresent()) {
+			throw new MsgApiException("Movimentação de produto não encontrada ou já foi deletada.");
+		}
+
 		movimentacaoProdutoRepository.deleteByIdAndPedido(id, idPedido, idEmpresa);
 	}
 

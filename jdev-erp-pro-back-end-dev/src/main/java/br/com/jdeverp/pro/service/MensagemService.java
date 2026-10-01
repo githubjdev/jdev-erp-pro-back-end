@@ -1,6 +1,7 @@
 package br.com.jdeverp.pro.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -106,19 +107,38 @@ public class MensagemService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
-
 		if (!mensagemRepository.existsById(id, idEmpresa)) {
-			throw new MsgApiException("Mensagem não encontrada para a empresa logada, portanto não pode ser deletada.");
+			throw new MsgApiException("Mensagem não encontrada ou já foi deletada.");
 		}
 
 		mensagemRepository.deleteById(id, idEmpresa);
 	}
 
 	public long deleteAll(Long empresaID) {
+		if (mensagemRepository.total(empresaID) == 0) {
+			throw new MsgApiException("Nenhuma mensagem encontrada para deletar ou todas já foram deletadas.");
+		}
+
 		return mensagemRepository.deleteAll(empresaID);
 	}
 
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		List<Long> encontrados = mensagemRepository.buscarPorIds(ids, empresaId).stream().map(Mensagem::getId).toList();
+		List<Long> naoEncontrados = new ArrayList<>();
+		ids.forEach(id -> {
+			if (!encontrados.contains(id)) {
+				naoEncontrados.add(id);
+			}
+		});
+
+		if (encontrados.isEmpty() && naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Nenhum registro informado para deletar.");
+		}
+
+		if (!naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Mensagens não encontradas ou já deletadas: " + naoEncontrados);
+		}
+
 		mensagemRepository.deletarAllById(ids, empresaId);
 	}
 
@@ -169,10 +189,18 @@ public class MensagemService {
 	}
 
 	public void deleteAllByChamado(Long idChamado, Long idEmpresa) {
+		if (mensagemRepository.countByChamado(idChamado, idEmpresa) == 0) {
+			throw new MsgApiException("Nenhuma mensagem encontrada para o chamado ou todas já foram deletadas.");
+		}
+
 		mensagemRepository.deleteAllByChamado(idChamado, idEmpresa);
 	}
 
 	public void deleteByIdAndChamado(Long id, Long idChamado, Long idEmpresa) {
+		if (!mensagemRepository.buscarPorId(id, idEmpresa).filter(mensagem -> mensagem.getChamado() != null && mensagem.getChamado().getId().equals(idChamado)).isPresent()) {
+			throw new MsgApiException("Mensagem não encontrada ou já foi deletada.");
+		}
+
 		mensagemRepository.deleteByIdAndChamado(id, idChamado, idEmpresa);
 	}
 

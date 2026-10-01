@@ -3,6 +3,7 @@ package br.com.jdeverp.pro.service;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import br.com.jdeverp.pro.exception.MsgApiException;
@@ -38,7 +39,7 @@ public class EmpresaService {
 	public Empresa salvar(Empresa empresa) {
 
 		if (!usuarioLogadoService.isAdmin()) {
-			throw new MsgApiException("Apenas administradores podem cadastrar empresas.");
+			throw new MsgApiException("Apenas administradores podem cadastrar empresas.", HttpStatus.FORBIDDEN);
 		}
 
 		if (empresa.getPessoa() == null || empresa.getPessoa().getId() == null) {
@@ -53,7 +54,7 @@ public class EmpresaService {
 	public Empresa atualizar(Empresa empresa) {
 
 		if (!usuarioLogadoService.isAdmin()) {
-			throw new MsgApiException("Apenas administradores podem atualizar empresas.");
+			throw new MsgApiException("Apenas administradores podem atualizar empresas.", HttpStatus.FORBIDDEN);
 		}
 
 		if (empresa.getId() == null) {
@@ -113,9 +114,12 @@ public class EmpresaService {
 	}
 
 	public void deleteById(Long id) {
+		if (!usuarioLogadoService.isAdmin()) {
+			throw new MsgApiException("Apenas administradores podem deletar empresas.", HttpStatus.FORBIDDEN);
+		}
 
 		if (empresaRepository.buscarPorId(id) == null) {
-			throw new MsgApiException("Empresa com id: " + id + " já foi removida do sistema.");
+			throw new MsgApiException("Empresa não encontrada ou já foi deletada.");
 		}
 
 		empresaRepository.deleteById(id);

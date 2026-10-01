@@ -1,5 +1,6 @@
 package br.com.jdeverp.pro.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -174,12 +175,7 @@ public class UsuarioService {
 			throw new MsgApiException("Não foi informado o registro de pessoa/ cliente ou funcioário para o usuário.");
 		}
 		
-		if (usuarioDto.getId() == null) {
-			throw new MsgApiException("Id do usuário não informado para atualizar.");
-		}
-
-		Usuario usuarioBanco = buscarPorId(usuarioDto.getId(), usuarioLogadoService.getEmpresaIdLogada())
-				.orElseThrow(() -> new MsgApiException("Usuário não encontrado para a empresa logada."));
+		Usuario usuarioBanco = buscarPorId(usuarioDto.getId(), usuarioLogadoService.getEmpresaIdLogada()).get();
 		
 		usuarioBanco.setClienteFuncionario(clienteFuncionario);
 		usuarioBanco.setEmpresa(usuarioLogadoService.getEmpresaLogada());
@@ -258,9 +254,8 @@ public class UsuarioService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
-
 		if (!usuarioRepository.existsById(id, idEmpresa)) {
-			throw new MsgApiException("Usuário não encontrado para a empresa logada, portanto não pode ser deletado.");
+			throw new MsgApiException("Usuário não encontrado ou já foi deletado.");
 		}
 
 		clienteFuncionarioService.removeUserClienteFuncionarioId(id, idEmpresa);
@@ -268,10 +263,30 @@ public class UsuarioService {
 	}
 
 	public long deleteAll(Long empresaID) {
+		if (usuarioRepository.total(empresaID) == 0) {
+			throw new MsgApiException("Nenhum usuário encontrado para deletar ou todos já foram deletados.");
+		}
+
 		return usuarioRepository.deleteAll(empresaID);
 	}
 
 	void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		List<Long> encontrados = usuarioRepository.buscarPorIds(ids, empresaId).stream().map(Usuario::getId).toList();
+		List<Long> naoEncontrados = new ArrayList<>();
+		ids.forEach(id -> {
+			if (!encontrados.contains(id)) {
+				naoEncontrados.add(id);
+			}
+		});
+
+		if (encontrados.isEmpty() && naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Nenhum registro informado para deletar.");
+		}
+
+		if (!naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Usuários não encontrados ou já deletados: " + naoEncontrados);
+		}
+
 		usuarioRepository.deletarAllById(ids, empresaId);
 	}
 

@@ -1,5 +1,6 @@
 package br.com.jdeverp.pro.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,20 +28,19 @@ public class ClienteFuncionarioService {
 	@Autowired /* Injeção de dependência */
 	private ClienteFuncionarioRepository clienteFuncionarioRepository;
 
+	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
+	@PersistenceContext
+	private EntityManager entityManager;
+	
 	@Autowired
 	private PessoaRepository pessoaRepository;
-
+	
 	@Autowired
 	private UsuarioRepository usuarioRepository;
 
 	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
 
-	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
-	@PersistenceContext
-	private EntityManager entityManager;
-	
-	
 	public ClienteFuncionario salvar(ClienteFuncionario clienteFuncionario ) {
 		return clienteFuncionarioRepository.saveAndFlush(clienteFuncionario);
 	} 
@@ -93,19 +93,38 @@ public class ClienteFuncionarioService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
-
 		if (!clienteFuncionarioRepository.existsById(id, idEmpresa)) {
-			throw new MsgApiException("Cliente/funcionário não encontrado para a empresa logada, portanto não pode ser deletado.");
+			throw new MsgApiException("Cliente/funcionário não encontrado ou já foi deletado.");
 		}
 
 		clienteFuncionarioRepository.deleteById(id, idEmpresa);
 	}
 
 	public long deleteAll(Long empresaID) {
+		if (clienteFuncionarioRepository.total(empresaID) == 0) {
+			throw new MsgApiException("Nenhum cliente/funcionário encontrado para deletar ou todos já foram deletados.");
+		}
+
 		return clienteFuncionarioRepository.deleteAll(empresaID);
 	}
 
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		List<Long> encontrados = clienteFuncionarioRepository.buscarPorIds(ids, empresaId).stream().map(ClienteFuncionario::getId).toList();
+		List<Long> naoEncontrados = new ArrayList<>();
+		ids.forEach(id -> {
+			if (!encontrados.contains(id)) {
+				naoEncontrados.add(id);
+			}
+		});
+
+		if (encontrados.isEmpty() && naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Nenhum registro informado para deletar.");
+		}
+
+		if (!naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Clientes/funcionários não encontrados ou já deletados: " + naoEncontrados);
+		}
+
 		clienteFuncionarioRepository.deletarAllById(ids, empresaId);
 	}
 

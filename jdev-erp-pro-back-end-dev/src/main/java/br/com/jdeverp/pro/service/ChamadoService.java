@@ -1,8 +1,8 @@
 package br.com.jdeverp.pro.service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.time.LocalDate;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,16 +20,16 @@ public class ChamadoService {
 
 	@Autowired /* Injeção de depência */
 	private ChamadoRepository chamadoRepository;
-
+	
+	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
+	@PersistenceContext
+	private EntityManager entityManager;
+	
 	@Autowired
 	private UsuarioRepository usuarioRepository;
 
 	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
-	
-	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
-	@PersistenceContext
-	private EntityManager entityManager;
 
 	public Chamado salvar(Chamado chamado) {
 		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
@@ -56,8 +56,7 @@ public class ChamadoService {
 		Chamado existente = chamadoRepository.buscarPorId(chamado.getId(), empresaId)
 				.orElseThrow(() -> new MsgApiException("Chamado não encontrado para a empresa logada."));
 
-		if (chamadoRepository.existePorTituloDiferenteId(
-				chamado.getId(), chamado.getTitulo(), empresaId)) {
+		if (chamadoRepository.existePorTituloDiferenteId(chamado.getId(), chamado.getTitulo(), empresaId)) {
 			throw new MsgApiException("Já existe outro chamado com o mesmo título para a empresa logada.");
 		}
 
@@ -82,7 +81,10 @@ public class ChamadoService {
 		return usuarioRepository.buscarPorId(usuario.getId(), empresaId)
 				.orElseThrow(() -> new MsgApiException("Usuário relacionado não encontrado para a empresa logada."));
 	}
-	
+
+	public Optional<Chamado> buscarPorId(Long id, Long idEmpresa) {
+		return chamadoRepository.buscarPorId(id, idEmpresa);
+	}
 
 	/* Os métodos do service serão chamador pelo Controller */
 	public List<Chamado> findAll(Long idEmpresa) {
@@ -91,10 +93,6 @@ public class ChamadoService {
 
 	public List<Chamado> buscaPorTitulo(String titulo, Long idEmpresa) {
 		return chamadoRepository.buscaPorTitulo(titulo, idEmpresa);
-	}
-
-	public Optional<Chamado> buscarPorId(Long id, Long idEmpresa) {
-		return chamadoRepository.buscarPorId(id, idEmpresa);
 	}
 
 	public boolean existePorTitulo(String titulo, Long idEmpresa) {
@@ -106,9 +104,8 @@ public class ChamadoService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
-
 		if (!chamadoRepository.existsById(id, idEmpresa)) {
-			throw new MsgApiException("Chamado não encontrado para a empresa logada, portanto não pode ser deletado.");
+			throw new MsgApiException("Chamado não encontrado ou já foi deletado.");
 		}
 
 		chamadoRepository.deleteById(id, idEmpresa);

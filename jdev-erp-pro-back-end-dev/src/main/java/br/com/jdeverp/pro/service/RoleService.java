@@ -48,11 +48,8 @@ public class RoleService {
 		if (role.getId() == null) {
 			throw new MsgApiException("Id do acesso deve ser informado para edição.");
 		}
-
-		if (!roleRepository.existePorId(role.getId())) {
-			throw new MsgApiException("Acesso com id: " + role.getId() + " não foi encontrado.");
-		}
-
+		
+		
 		if (!role.getAcesso().startsWith("ROLE_")) {
 			throw new MsgApiException("Nomenclatura de acesso não contém ROLE_ no incio");
 		}

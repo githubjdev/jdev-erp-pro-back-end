@@ -1,5 +1,6 @@
 package br.com.jdeverp.pro.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -76,19 +77,38 @@ public class PessoaService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
-
 		if (!pessoaRepository.existsById(id, idEmpresa)) {
-			throw new MsgApiException("Pessoa não encontrada para a empresa logada, portanto não pode ser deletada.");
+			throw new MsgApiException("Pessoa não encontrada ou já foi deletada.");
 		}
 
 		pessoaRepository.deleteById(id, idEmpresa);
 	}
 
 	public long deleteAll(Long empresaID) {
+		if (pessoaRepository.total(empresaID) == 0) {
+			throw new MsgApiException("Nenhuma pessoa encontrada para deletar ou todas já foram deletadas.");
+		}
+
 		return pessoaRepository.deleteAll(empresaID);
 	}
 
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		List<Long> encontrados = pessoaRepository.buscarPorIds(ids, empresaId).stream().map(Pessoa::getId).toList();
+		List<Long> naoEncontrados = new ArrayList<>();
+		ids.forEach(id -> {
+			if (!encontrados.contains(id)) {
+				naoEncontrados.add(id);
+			}
+		});
+
+		if (encontrados.isEmpty() && naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Nenhum registro informado para deletar.");
+		}
+
+		if (!naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Pessoas não encontradas ou já deletadas: " + naoEncontrados);
+		}
+
 		pessoaRepository.deletarAllById(ids, empresaId);
 	}
 

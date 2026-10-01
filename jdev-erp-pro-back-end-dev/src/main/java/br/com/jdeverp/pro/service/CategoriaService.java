@@ -45,11 +45,7 @@ public class CategoriaService {
 		if(categoria.getId() == null) {
 			throw new MsgApiException("Id da categoria não informado para atualizar.");
 		}
-
-		if (!categoriaRepository.existsById(categoria.getId(), usuarioLogadoService.getEmpresaIdLogada())) {
-			throw new MsgApiException("Categoria não encontrada para a empresa logada.");
-		}
-
+		
 		if (this.existePorNomeDiferenteId(categoria.getId(),  categoria.getNome(), usuarioLogadoService.getEmpresaIdLogada())) {
 			throw new MsgApiException("Já existe uma categoria com o mesmo nome desta que sendo informada para atualizar, informe outro nome.");
 		}
@@ -69,12 +65,12 @@ public class CategoriaService {
 		return categoriaRepository.buscaPorNome(nome, idEmpresa);
 	}
 
-	boolean existePorNome(String nome, Long idEmpresa) {
+	public boolean existePorNome(String nome, Long idEmpresa) {
 
 		return categoriaRepository.existePorNome(nome, idEmpresa);
 	}
 
-	boolean existePorNomeDiferenteId(Long id, String nome, Long idEmpresa) {
+	public boolean existePorNomeDiferenteId(Long id, String nome, Long idEmpresa) {
 		return categoriaRepository.existePorNomeDiferenteId(id, nome, idEmpresa);
 	}
 

@@ -1,5 +1,6 @@
 package br.com.jdeverp.pro.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,15 +26,15 @@ public class PedidoService {
 	@Autowired /* Injeção de dependência */
 	private PedidoRepository pedidoRepository;
 
+	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
+	@PersistenceContext
+	private EntityManager entityManager;
+
 	@Autowired
 	private UsuarioRepository usuarioRepository;
 
 	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
-
-	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
-	@PersistenceContext
-	private EntityManager entityManager;
 
 	public Pedido salvar(Pedido pedido) {
 		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
@@ -56,8 +57,7 @@ public class PedidoService {
 		Pedido existente = pedidoRepository.buscarPorId(pedido.getId(), empresaId)
 				.orElseThrow(() -> new MsgApiException("Pedido não encontrado para a empresa logada."));
 
-		if (pedidoRepository.existePorNumeroPedidoDiferenteId(
-				pedido.getId(), pedido.getNumeroPedido(), empresaId)) {
+		if (pedidoRepository.existePorNumeroPedidoDiferenteId(pedido.getId(), pedido.getNumeroPedido(), empresaId)) {
 			throw new MsgApiException("Já existe outro pedido com o mesmo número para a empresa logada.");
 		}
 
@@ -106,19 +106,38 @@ public class PedidoService {
 	}
 
 	public void deleteById(Long id, Long idEmpresa) {
-
 		if (!pedidoRepository.existsById(id, idEmpresa)) {
-			throw new MsgApiException("Pedido não encontrado para a empresa logada, portanto não pode ser deletado.");
+			throw new MsgApiException("Pedido não encontrado ou já foi deletado.");
 		}
 
 		pedidoRepository.deleteById(id, idEmpresa);
 	}
 
 	public long deleteAll(Long empresaID) {
+		if (pedidoRepository.total(empresaID) == 0) {
+			throw new MsgApiException("Nenhum pedido encontrado para deletar ou todos já foram deletados.");
+		}
+
 		return pedidoRepository.deleteAll(empresaID);
 	}
 
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		List<Long> encontrados = pedidoRepository.buscarPorIds(ids, empresaId).stream().map(Pedido::getId).toList();
+		List<Long> naoEncontrados = new ArrayList<>();
+		ids.forEach(id -> {
+			if (!encontrados.contains(id)) {
+				naoEncontrados.add(id);
+			}
+		});
+
+		if (encontrados.isEmpty() && naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Nenhum registro informado para deletar.");
+		}
+
+		if (!naoEncontrados.isEmpty()) {
+			throw new MsgApiException("Pedidos não encontrados ou já deletados: " + naoEncontrados);
+		}
+
 		pedidoRepository.deletarAllById(ids, empresaId);
 	}
 

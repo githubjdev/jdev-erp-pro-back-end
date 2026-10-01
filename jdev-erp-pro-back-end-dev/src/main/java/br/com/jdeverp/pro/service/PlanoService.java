@@ -49,6 +49,10 @@ public class PlanoService {
 		return planoRepository.save(plano);
 	}
 
+	public Optional<Plano> buscarPorId(Long id) {
+		return planoRepository.findById(id);
+	}
+
 	public List<Plano> findAll() {
 		
 		return planoRepository.findAll();
@@ -56,10 +60,6 @@ public class PlanoService {
 
 	public List<Plano> buscaPorNome(String nome) {
 		return planoRepository.buscaPorNome(nome);
-	}
-
-	public Optional<Plano> buscarPorId(Long id) {
-		return planoRepository.findById(id);
 	}
 
 	public boolean existePorNome(String nome) {
@@ -71,9 +71,8 @@ public class PlanoService {
 	}
 
 	public void deleteById(Long id) {
-
 		if (!planoRepository.findById(id).isPresent()) {
-			throw new MsgApiException("Plano com id: " + id + " já foi removido do sistema.");
+			throw new MsgApiException("Plano não encontrado ou já foi deletado.");
 		}
 
 		planoRepository.deleteById(id);
