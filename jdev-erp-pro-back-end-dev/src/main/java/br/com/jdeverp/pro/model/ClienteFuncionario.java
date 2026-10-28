@@ -49,7 +49,6 @@ public class ClienteFuncionario {
 	private TipoClienteFuncionario tipoClienteFuncionario;
 	
 	
-	@NotNull(message = "O usuário deve ser informado para criar o cadastro")
 	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "usuario_id", 
     			nullable = true, 
@@ -66,7 +65,6 @@ public class ClienteFuncionario {
 	private Pessoa pessoa;
 	
 	
-	@NotNull(message = "Empresa deve ser informado")
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "empresa_id", 
 	        nullable = false, 

@@ -37,6 +37,10 @@ public interface ClienteFuncionarioRepository extends JpaJdevRepository<ClienteF
             + " = unaccent(upper(trim(:nome)))")
     boolean existePorNome(@Param("nome") String nome, @Param("idEmpresa") Long idEmpresa);
     
+    @Query("select count(c.id) > 0 from ClienteFuncionario c where c.empresa.id = :idEmpresa "
+            + " and c.pessoa.id = :idPessoa and c.empresa.id = :idEmpresa")
+    boolean existeParaPessoa(@Param("idPessoa") Long idPessoa, @Param("idEmpresa") Long idEmpresa);
+    
     /*Verifica se existe outro registro no banco de dados com a mesma pessoa (nome) mas ID diferentes da que está tentando atualizar*/
     @Query("select count(c.id) > 0 from ClienteFuncionario c where c.empresa.id = :idEmpresa "
             + " and unaccent(upper(trim(c.pessoa.nome))) "

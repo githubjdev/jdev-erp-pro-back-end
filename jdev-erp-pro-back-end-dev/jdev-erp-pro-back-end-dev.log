@@ -1,0 +1,7 @@
+2026-10-28 18:42:07.412 [main] INFO  b.c.j.p.contexto.TestContextoSpring - Starting TestContextoSpring using Java 25.0.3 with PID 20524 (started by alex_ in C:\Users\alex_\git\jdev-erp-pro-back-end\jdev-erp-pro-back-end-dev)
+2026-10-28 18:42:07.421 [main] INFO  b.c.j.p.contexto.TestContextoSpring - The following 1 profile is active: "dev"
+2026-10-28 18:42:10.458 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool - Starting...
+2026-10-28 18:42:10.785 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool - Start completed.
+2026-10-28 18:42:16.002 [main] INFO  b.c.j.p.contexto.TestContextoSpring - Started TestContextoSpring in 9.035 seconds (process running for 10.444)
+2026-10-28 18:42:16.878 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool - Shutdown initiated...
+2026-10-28 18:42:16.881 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool - Shutdown completed.

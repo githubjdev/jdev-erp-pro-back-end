@@ -1,13 +1,16 @@
 package br.com.jdeverp.pro.service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import br.com.jdeverp.pro.dto.EmpresaDTO;
 import br.com.jdeverp.pro.exception.MsgApiException;
 import br.com.jdeverp.pro.model.Empresa;
+import br.com.jdeverp.pro.model.Pessoa;
 import br.com.jdeverp.pro.model.Plano;
 import br.com.jdeverp.pro.repository.EmpresaRepository;
 import br.com.jdeverp.pro.repository.PlanoRepository;
@@ -32,11 +35,19 @@ public class EmpresaService {
 
 	@Autowired
 	private PlanoRepository planoRepository;
+	
+	@Autowired
+	private PessoaService pessoaService;
 
 	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
 
-	public Empresa salvar(Empresa empresa) {
+	public EmpresaDTO salvar(Empresa empresa) {
+		
+		if (empresaRepository.existePorPessoa(empresa.getPessoa().getId())) {
+			Pessoa pessoa = pessoaService.buscarPorId(empresa.getPessoa().getId(), usuarioLogadoService.getEmpresaIdLogada()).get();
+			throw new MsgApiException("Já existe uma empresa cadastrada para a pessoa: " + pessoa.getNome());
+		}
 
 		if (!usuarioLogadoService.isAdmin()) {
 			throw new MsgApiException("Apenas administradores podem cadastrar empresas.", HttpStatus.FORBIDDEN);
@@ -47,11 +58,24 @@ public class EmpresaService {
 		}
 
 		empresa.setPlano(validarPlano(empresa.getPlano()));
+		
+		empresa =  empresaRepository.saveAndFlush(empresa);
+		
+		EmpresaDTO dto = new EmpresaDTO();
+		dto.setId(empresa.getId());
+		dto.setTotalUsuario(empresa.getTotalUsuario());
+		dto.setTotalCliente(empresa.getTotalCliente());
+		dto.setPlanoAtivo(empresa.getPlanoAtivo());
+		dto.setBloqueio(empresa.getBloqueio());
+		dto.setLogoMarca(empresa.getLogoMarca());
+		dto.setVigenciaPlano(empresa.getVigenciaPlano());
+		dto.setPessoaId(empresa.getPlano().getId());
+		dto.setPessoaNome(empresa.getPessoa().getNome());
 
-		return empresaRepository.saveAndFlush(empresa);
+		return dto;
 	}
 
-	public Empresa atualizar(Empresa empresa) {
+	public EmpresaDTO atualizar(Empresa empresa) {
 
 		if (!usuarioLogadoService.isAdmin()) {
 			throw new MsgApiException("Apenas administradores podem atualizar empresas.", HttpStatus.FORBIDDEN);
@@ -79,8 +103,23 @@ public class EmpresaService {
 		existente.setBloqueio(empresa.getBloqueio());
 		existente.setLogoMarca(empresa.getLogoMarca());
 		existente.setVigenciaPlano(empresa.getVigenciaPlano());
+		
+		
+		existente =  empresaRepository.saveAndFlush(existente);
+		
+		EmpresaDTO dto = new EmpresaDTO();
+		dto.setId(existente.getId());
+		dto.setTotalUsuario(existente.getTotalUsuario());
+		dto.setTotalCliente(existente.getTotalCliente());
+		dto.setPlanoAtivo(existente.getPlanoAtivo());
+		dto.setBloqueio(existente.getBloqueio());
+		dto.setLogoMarca(existente.getLogoMarca());
+		dto.setVigenciaPlano(existente.getVigenciaPlano());
+		dto.setPessoaId(existente.getPlano().getId());
+		dto.setPessoaNome(existente.getPessoa().getNome());
 
-		return empresaRepository.saveAndFlush(existente);
+		return dto;
+
 	}
 
 	private Plano validarPlano(Plano plano) {
@@ -92,17 +131,67 @@ public class EmpresaService {
 				.orElseThrow(() -> new MsgApiException("Plano com id: " + plano.getId() + " não foi encontrado."));
 	}
 
-	public Empresa buscaPorId(Long id) {
-		return empresaRepository.buscarPorId(id);
+	public EmpresaDTO buscaPorId(Long id) {
+		
+		Empresa empresa = empresaRepository.buscarPorId(id);
+		
+		EmpresaDTO dto = new EmpresaDTO();
+		dto.setId(empresa.getId());
+		dto.setTotalUsuario(empresa.getTotalUsuario());
+		dto.setTotalCliente(empresa.getTotalCliente());
+		dto.setPlanoAtivo(empresa.getPlanoAtivo());
+		dto.setBloqueio(empresa.getBloqueio());
+		dto.setLogoMarca(empresa.getLogoMarca());
+		dto.setVigenciaPlano(empresa.getVigenciaPlano());
+		dto.setPessoaId(empresa.getPlano().getId());
+		dto.setPessoaNome(empresa.getPessoa().getNome());
+		
+		return dto;
 	}
 
-	public List<Empresa> findAll() {
+	public List<EmpresaDTO> findAll() {
 
-		return empresaRepository.findAll();
+		List<Empresa> empresas = empresaRepository.findAll();
+		List<EmpresaDTO> dtos = new ArrayList<EmpresaDTO>();
+
+		for (Empresa empresa : empresas) {
+			EmpresaDTO dto = new EmpresaDTO();
+			dto.setId(empresa.getId());
+			dto.setTotalUsuario(empresa.getTotalUsuario());
+			dto.setTotalCliente(empresa.getTotalCliente());
+			dto.setPlanoAtivo(empresa.getPlanoAtivo());
+			dto.setBloqueio(empresa.getBloqueio());
+			dto.setLogoMarca(empresa.getLogoMarca());
+			dto.setVigenciaPlano(empresa.getVigenciaPlano());
+			dto.setPessoaId(empresa.getPlano().getId());
+			dto.setPessoaNome(empresa.getPessoa().getNome());
+			dtos.add(dto);
+		}
+
+		return dtos;
 	}
 
-	public List<Empresa> buscaPorNome(String nome) {
-		return empresaRepository.buscaPorNome(nome);
+	public List<EmpresaDTO> buscaPorNome(String nome) {
+		
+		List<Empresa> empresas = empresaRepository.buscaPorNome(nome);
+		List<EmpresaDTO> dtos = new ArrayList<EmpresaDTO>();
+
+		for (Empresa empresa : empresas) {
+			EmpresaDTO dto = new EmpresaDTO();
+			dto.setId(empresa.getId());
+			dto.setTotalUsuario(empresa.getTotalUsuario());
+			dto.setTotalCliente(empresa.getTotalCliente());
+			dto.setPlanoAtivo(empresa.getPlanoAtivo());
+			dto.setBloqueio(empresa.getBloqueio());
+			dto.setLogoMarca(empresa.getLogoMarca());
+			dto.setVigenciaPlano(empresa.getVigenciaPlano());
+			dto.setPessoaId(empresa.getPlano().getId());
+			dto.setPessoaNome(empresa.getPessoa().getNome());
+			dtos.add(dto);
+		}
+
+		return dtos;
+		
 	}
 
 	public boolean existePorNome(String nome) {
