@@ -5,20 +5,19 @@ paths:
 ---
 # Controllers e DTOs
 
-- **O controller só recebe, valida (`@Valid`) e delega ao service.** Não chama repository, não tem regra de negócio nem `try/catch`: os erros vão para o `GlobalExceptionHandler`.
-- **Empresa logada:** em consultas e exclusões, passe `usuarioLogadoService.getEmpresaIdLogada()` ao service.
-- **Rotas:**
-  - Rota base no singular (`/api/movimentacaoProduto`). A ação vai no caminho, não no verbo HTTP.
-  - Variações por pai: `/listarPorPedido/{idPedido}`, `/deletarPorPedido/{id}/{idPedido}`.
-  - Lote: `POST /buscarPorIds` e `DELETE /deletarTodosPorIds`, com `@RequestBody Iterable<Long> ids`.
-- **Exclusão** devolve 200 com mensagem: `ResponseEntity.ok("Categoria deletada com sucesso.")`.
-- **Erros:**
-  - Registro não encontrado ou regra violada: o service lança `MsgApiException`, que vira 400.
-  - Nunca monte `ResponseApi` no controller.
+- **Papel:** o controller recebe, valida (`@RequestBody @Valid`) e delega ao service. Não acessa repository, não tem regra de negócio nem `try/catch` (os erros vão para o `GlobalExceptionHandler`).
+- **Classe:** `@RestController` + `@RequestMapping("/api/entidadeCamelCase")` no singular. Service e `UsuarioLogadoService` com `@Autowired`. Passe `usuarioLogadoService.getEmpresaIdLogada()` ao service.
+- **Endpoints padrão:**
+  - escrita: `POST /salvar`, `POST /atualizar`, `DELETE /deletar/{id}`;
+  - consulta: `GET /listar`, `GET /buscarPorId/{id}`, `GET /existePorNome/{nome}`, `GET /existePorNomeDiferenteId/{id}/{nome}`, `GET /existePorId/{id}`, `GET /total`, `GET /paginado`.
+- **Variações:** por pai, `/listarPorPedido/{idPedido}` e `/deletarPorPedido/{id}/{idPedido}`. Em lote, `POST /buscarPorIds` e `DELETE /deletarTodosPorIds`, com `@RequestBody Iterable<Long> ids`.
+- **Resposta:**
+  - Sempre `ResponseEntity.ok(...)`. A exclusão devolve uma mensagem (`"Categoria deletada com sucesso."`).
+  - Registro não encontrado ou regra violada: o service lança `MsgApiException` (400). Nunca monte `ResponseApi` no controller.
+- **Paginação:** `page=0`, `size=10`, `sort=id`, `direction=asc` → `PageRequest.of(...)` → `service.listarPaginado(empresaId, pageable)`, como em `CategoriaController.listarPaginado()`.
+  - O `sort` é concatenado no JPQL: aceite só campos conhecidos da entidade.
 - **Entidade ou DTO:**
-  - CRUD simples recebe e devolve a própria entidade (padrão atual).
-  - Use DTO quando houver campo sensível ou dado derivado (`UsuarioDto`, `LoginDTO`, `TokenDTO`, `AlterarSenhaDTO`).
-  - Para `Empresa` e `ClienteFuncionario` use DTO também: elas saem só como id no JSON (`@JsonIdentityReference(alwaysAsId = true)`).
-- **Formato do DTO:** em `br.com.jdeverp.pro.dto`, nome `EntidadeDTO` (`UsuarioDto` é exceção antiga), com Lombok `@Getter @Setter`. Relacionamento vira `xxxId` + `xxxNome`, ex.: `pessoaId`, `pessoaNome`.
-- **Mapeamento entidade↔DTO:** manual, no service, sem MapStruct. Use um método privado `converterParaDto(...)`, como em `UsuarioService`, em vez de repetir o bloco de setters.
-- **`sort` de `/paginado`:** vai concatenado no JPQL. Aceite só nomes de campo conhecidos da entidade; qualquer outro valor é recusado com `MsgApiException`.
+  - CRUD simples usa a própria entidade.
+  - Use DTO para campo sensível ou derivado (`UsuarioDto`, `LoginDTO`, `TokenDTO`, `AlterarSenhaDTO`).
+  - Use DTO também para `Empresa` e `ClienteFuncionario`: no JSON elas saem só como id (`@JsonIdentityReference(alwaysAsId = true)`).
+- **DTO:** classe `dto/EntidadeDTO` (`UsuarioDto` é exceção antiga), com Lombok `@Getter @Setter`. Relacionamentos viram `xxxId` + `xxxNome`. A conversão é manual, no service.

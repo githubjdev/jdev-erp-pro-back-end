@@ -1,6 +1,6 @@
 # Regras de negócio — Jdev ERP Pro
 
-Levantadas do código de `jdev-erp-pro-back-end-dev/` (services, entidades e `V1_INIT.sql`) em 2026-10-28. O documento descreve só o que o código faz hoje, sem regras inventadas. Onde a intenção não está clara, aparece `[CONFIRMAR]`.
+Levantadas do código de `jdev-erp-pro-back-end-dev/` (services, entidades e `V1_INIT.sql`) em 2026-10-28. O documento descreve só o que o código faz hoje, sem regras inventadas. Pontos com intenção incerta citam a pendência correspondente (Pn) de `docs/pendencias.md`.
 Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.pro.service` e `br.com.jdeverp.pro.model`.
 
 ## 0. Regras gerais (todos os módulos com empresa)
@@ -203,16 +203,16 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 ## Pontos de atenção (duplicidades, contradições e lacunas)
 
 **Contradições entre camadas**
-- **Plano FREE x validação da API.** O CHECK do banco exige valor 0 para o FREE, mas `@Min(49)` em `Plano.valorMensal` recusa 0. Pela API, não dá para cadastrar nem editar um plano FREE (regras 34 e 35). `[CONFIRMAR]`
+- **Plano FREE x validação da API.** O CHECK do banco exige valor 0 para o FREE, mas `@Min(49)` em `Plano.valorMensal` recusa 0. Pela API, não dá para cadastrar nem editar um plano FREE (regras 34 e 35). (P11)
 - **Unicidade de login.** O service verifica por empresa (`existePorLogin(login, empresaId)`), mas o banco e o login são globais (`unique_login`, `buscaPorLogin` sem empresa). Um login repetido em outra empresa passa pelo service e quebra no banco.
-- **Unicidade de pessoa.** O nome é único por empresa, enquanto CPF, CNPJ, e-mail e inscrição estadual são únicos no banco inteiro. Na prática, a mesma pessoa não pode estar em duas empresas. O mesmo vale para `ClienteFuncionario.unique_pessoa` (global) frente a `existeParaPessoa` (por empresa). `[CONFIRMAR]`
-- **CPF e CNPJ obrigatórios ao mesmo tempo.** Isso vale para qualquer `TipoPessoa`: `cpf` com `@NotNull` e `cnpj` com `nullable=false`. A intenção provável é exigir um ou outro conforme FISICA/JURIDICA. `[CONFIRMAR]`
-- **`ClienteFuncionario`: usuário opcional no cadastro, obrigatório na edição.** Um cadastro sem usuário não pode ser editado (regras 58 e 59). `[CONFIRMAR]`
+- **Unicidade de pessoa.** O nome é único por empresa, enquanto CPF, CNPJ, e-mail e inscrição estadual são únicos no banco inteiro. Na prática, a mesma pessoa não pode estar em duas empresas. O mesmo vale para `ClienteFuncionario.unique_pessoa` (global) frente a `existeParaPessoa` (por empresa). (P12)
+- **CPF e CNPJ obrigatórios ao mesmo tempo.** Isso vale para qualquer `TipoPessoa`: `cpf` com `@NotNull` e `cnpj` com `nullable=false`. A intenção provável é exigir um ou outro conforme FISICA/JURIDICA. (P13)
+- **`ClienteFuncionario`: usuário opcional no cadastro, obrigatório na edição.** Um cadastro sem usuário não pode ser editado (regras 58 e 59). (P14)
 - **Senha mínima.** O código aceita 5 caracteres, mas a mensagem diz "mais de 5" (regra 11).
-- **Estoque e preço mínimos.** `@Min(1)` aceita 1, mas a mensagem diz "maior que 1". Além disso, nenhum produto pode ter estoque 0 (regra 66). `[CONFIRMAR]`
+- **Estoque e preço mínimos.** `@Min(1)` aceita 1, mas a mensagem diz "maior que 1". Além disso, nenhum produto pode ter estoque 0 (regra 66). (P15)
 
 **Autorização inconsistente entre módulos**
-- **Admin exigido de forma desigual.** `Empresa` e `Usuario` (salvar/atualizar) exigem `ROLE_ADMIN`. `Plano`, `Role` e `RoleUsuario` não exigem nada: qualquer usuário autenticado pode criar planos, criar roles e atribuir `ROLE_ADMIN` a si mesmo. `[CONFIRMAR]`
+- **Admin exigido de forma desigual.** `Empresa` e `Usuario` (salvar/atualizar) exigem `ROLE_ADMIN`. `Plano`, `Role` e `RoleUsuario` não exigem nada: qualquer usuário autenticado pode criar planos, criar roles e atribuir `ROLE_ADMIN` a si mesmo. (P10)
 - **Status HTTP diferente para a mesma negação.** `EmpresaService` devolve 403 quando falta `ROLE_ADMIN`, e `UsuarioService` devolve 400.
 - **Exclusão de usuários sem admin.** `UsuarioService.deleteById()` e `deleteAll()` não exigem admin, embora cadastrar exija. O `deleteAll` apaga inclusive o usuário logado.
 - **Listagem de empresas sem admin.** Qualquer usuário autenticado lista e busca todas as empresas de todos os tenants — `EmpresaService.findAll()`, `buscaPorNome()`.
@@ -223,13 +223,13 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 - `RoleUsuarioService.salvar()` e `atualizar()` não verificam se o usuário informado é da empresa logada.
 - `MensagemService.updateLida()` não verifica se a mensagem existe.
 
-**Regras que o modelo sugere, mas não existem no código** `[CONFIRMAR]`
-- **Limites do plano não aplicados.** `limiteUsuario` e `limiteCliente` não são verificados ao cadastrar usuário ou cliente. `totalUsuario` e `totalCliente` da empresa vêm do request, não são calculados.
-- **Plano ativo e vigência não verificados.** `planoAtivo` e `vigenciaPlano` não são checados no login nem em outro ponto. Só `bloqueio` bloqueia.
-- **Estoque não atualizado.** `MovimentacaoProduto` e `ItemPedido` não alteram `Produto.estoque`, e nada impede vender sem estoque.
-- **Totais não calculados.** Os totais de `Pedido` e `ItemPedido` não são calculados nem conferidos, e não há relação entre os itens e o total do pedido.
-- **Sem transição de status.** Não há regra de mudança de status em `Pedido` nem em `Chamado`. `dataCancelamento`, `dataPagamento`, `dataFechamento` e `fechadoUser` não dependem do status (ex.: `FECHADO` sem `fechadoUser`).
-- **Datas obrigatórias sem preenchimento.** `Pessoa.dataCadastro` é `NOT NULL` no banco, mas o service não preenche nem valida. O mesmo vale para `Mensagem.arquivo`, que é `NOT NULL` sem `@NotNull`.
+**Regras que o modelo sugere, mas não existem no código** (P16–P20)
+- **Limites do plano não aplicados.** `limiteUsuario` e `limiteCliente` não são verificados ao cadastrar usuário ou cliente. `totalUsuario` e `totalCliente` da empresa vêm do request, não são calculados. (P16)
+- **Plano ativo e vigência não verificados.** `planoAtivo` e `vigenciaPlano` não são checados no login nem em outro ponto. Só `bloqueio` bloqueia. (P16)
+- **Estoque não atualizado.** `MovimentacaoProduto` e `ItemPedido` não alteram `Produto.estoque`, e nada impede vender sem estoque. (P17)
+- **Totais não calculados.** Os totais de `Pedido` e `ItemPedido` não são calculados nem conferidos, e não há relação entre os itens e o total do pedido. (P18)
+- **Sem transição de status.** Não há regra de mudança de status em `Pedido` nem em `Chamado`. `dataCancelamento`, `dataPagamento`, `dataFechamento` e `fechadoUser` não dependem do status (ex.: `FECHADO` sem `fechadoUser`). (P19)
+- **Datas obrigatórias sem preenchimento.** `Pessoa.dataCadastro` é `NOT NULL` no banco, mas o service não preenche nem valida. O mesmo vale para `Mensagem.arquivo`, que é `NOT NULL` sem `@NotNull`. (P20)
 
 **Defeitos pontuais encontrados ao levantar as regras**
 - **`EmpresaDTO.pessoaId` recebe o id do plano.** Acontece em todos os métodos de `EmpresaService` (`dto.setPessoaId(empresa.getPlano().getId())`).
@@ -240,16 +240,5 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
   - `UsuarioService.atualizar()` diz "Apenas administradores podem cadastrar novos usuários".
   - `Pedido.dataPedido` tem a mensagem "Informe a forma de pagamento".
 
-## Itens `[CONFIRMAR]`
-
-1. Se o plano FREE deve poder ser cadastrado ou editado pela API (hoje `@Min(49)` impede).
-2. Se CPF, CNPJ, e-mail e inscrição estadual devem ser únicos por empresa, e não no banco inteiro (o mesmo para `ClienteFuncionario.unique_pessoa`).
-3. Se CPF e CNPJ devem depender de `TipoPessoa` (FISICA → CPF, JURIDICA → CNPJ).
-4. Se o usuário deve ser opcional também na edição de `ClienteFuncionario`.
-5. Se estoque 0 deve ser permitido em `Produto`.
-6. Se `Plano`, `Role` e `RoleUsuario` devem exigir `ROLE_ADMIN`.
-7. Se os limites do plano (`limiteUsuario`, `limiteCliente`), `planoAtivo` e `vigenciaPlano` deveriam ser aplicados.
-8. Se movimentações e itens de pedido deveriam alterar `Produto.estoque`.
-9. Se os totais de pedido e item deveriam ser calculados no back-end.
-10. Quais transições de status são permitidas em `Pedido` e em `Chamado`.
-11. Quem deve preencher `Pessoa.dataCadastro` e se `Mensagem.arquivo` deve ser obrigatório.
+## Pendências
+As dúvidas deste documento estão em `docs/pendencias.md` (P10 a P20).
