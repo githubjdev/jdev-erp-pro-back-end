@@ -146,7 +146,7 @@ public class UsuarioService {
 		}
 		
 		clienteFuncionario.setUsuario(usuario);
-		clienteFuncionarioService.salvar(clienteFuncionario);
+		clienteFuncionarioService.salvarClienteFunUser(clienteFuncionario);
 		
 		usuarioDto.setSenha("***Ocultada***");/*Não pode expor a senha na rede*/
 		usuarioDto.setId(usuario.getId());
@@ -312,6 +312,8 @@ public class UsuarioService {
 			dto.setLiberado(usuario.isEnabled());
 			dto.setEmpresa(usuario.getEmpresa().getPessoa().getNome());
 			dto.setTipoClienteFuncionario(usuario.getClienteFuncionario().getTipoClienteFuncionario().name());
+			dto.setPessoaId(usuario.getClienteFuncionario().getPessoa().getId());
+			dto.setClienteFuncionarioId(usuario.getClienteFuncionario().getId());
 			
 			dtos.add(dto);
 		}

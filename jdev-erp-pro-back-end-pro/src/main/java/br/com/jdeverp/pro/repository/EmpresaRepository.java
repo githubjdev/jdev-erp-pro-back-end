@@ -31,6 +31,10 @@ public interface EmpresaRepository extends JpaJdevRepository<Empresa, Long> {
 			+ " where unaccent(upper(trim(e.pessoa.nome))) "
 			+ " = unaccent(upper(trim(:nome)))")
 	boolean existePorNome(@Param("nome") String nome);
+	
+	@Query("select count(e.id) > 0 from Empresa e "
+			+ " where e.pessoa.id = :idPessoa ")
+	boolean existePorPessoa(@Param("idPessoa") Long idPessoa);
 
 	/*Verifica se existe outra empresa no banco de dados com o mesmo nome (pessoa.nome) mas ID diferentes da que está tentando atualizar*/
 	@Query("select count(e.id) > 0 from Empresa e "

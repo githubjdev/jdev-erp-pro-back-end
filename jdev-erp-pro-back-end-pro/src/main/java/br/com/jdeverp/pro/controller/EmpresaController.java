@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.jdeverp.pro.dto.EmpresaDTO;
 import br.com.jdeverp.pro.model.Empresa;
 import br.com.jdeverp.pro.service.EmpresaService;
 import jakarta.validation.Valid;
@@ -24,27 +25,27 @@ public class EmpresaController {
         private EmpresaService empresaService;
 
         @PostMapping("/salvar")
-        public ResponseEntity<Empresa> salvar(@RequestBody @Valid Empresa empresa) {
+        public ResponseEntity<EmpresaDTO> salvar(@RequestBody @Valid Empresa empresa) {
                 return ResponseEntity.ok(empresaService.salvar(empresa));
         }
 
         @PostMapping("/atualizar")
-        public ResponseEntity<Empresa> atualizar(@RequestBody @Valid Empresa empresa) {
+        public ResponseEntity<EmpresaDTO> atualizar(@RequestBody @Valid Empresa empresa) {
                 return ResponseEntity.ok(empresaService.atualizar(empresa));
         }
 
         @GetMapping("/buscarPorId/{id}")
-        public ResponseEntity<Empresa> buscarPorId(@PathVariable Long id) {
+        public ResponseEntity<EmpresaDTO> buscarPorId(@PathVariable Long id) {
                 return ResponseEntity.ok(empresaService.buscaPorId(id));
         }
 
         @GetMapping("/listar")
-        public ResponseEntity<List<Empresa>> listar() {
+        public ResponseEntity<List<EmpresaDTO>> listar() {
                 return ResponseEntity.ok(empresaService.findAll());
         }
 
         @GetMapping("/buscaPorNome/{nome}")
-        public ResponseEntity<List<Empresa>> buscaPorNome(@PathVariable String nome) {
+        public ResponseEntity<List<EmpresaDTO>> buscaPorNome(@PathVariable String nome) {
                 return ResponseEntity.ok(empresaService.buscaPorNome(nome));
         }
 

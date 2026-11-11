@@ -63,6 +63,7 @@ public class Pessoa {
 	@Column(nullable = false)
 	private String telefone;
 
+	@NotNull(message = "Informe o CPF corretamente")
 	@CPF(message = "Informe o CPF corretamente")
 	@Column(unique = true, nullable = false)
 	private String cpf;
@@ -71,7 +72,7 @@ public class Pessoa {
 	@Column(nullable = false, unique = true)
 	private String email;
 
-	@NotBlank(message = "Informe o tipo da pessoa PF ou PJ")
+	@NotNull(message = "Informe o tipo da pessoa PF ou PJ")
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private TipoPessoa tipoPessoa;
@@ -113,7 +114,6 @@ public class Pessoa {
 	private String complemento;
 
 	/*Refere-se ao cadastro da empresa em multitanci*/
-	@NotNull(message = "Empresa deve ser informado")
 	@ManyToOne(fetch = FetchType.LAZY) /* LAZY -> Carrega a empresa quando tiver necessidade */
 	@JoinColumn(name = "empresa_id", 
 	        nullable = false, 

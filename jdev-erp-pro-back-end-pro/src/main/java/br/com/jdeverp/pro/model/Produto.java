@@ -62,20 +62,18 @@ public class Produto {
 
 	private String codigoBarra; /*Varios tipo de parafuso*/
 
-	@NotBlank(message = "Unidade de medida de ser informado")
+	@NotNull(message = "Unidade de medida de ser informado")
 	@Enumerated(EnumType.STRING)
 	@Column(name = "unidade_medida", nullable = false)
 	private UnidadeMedida unidadeMedida;
 	
 	@NotNull(message = "Categoria deve ser informada.")
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "categoria_id", nullable = false, 
 	          foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT, 
 	                    name = "categoria_fk"))
 	private Categoria categoria;
 	
-	/*Refere-se ao cadastro da empresa em multitanci*/
-	@NotNull(message = "Empresa deve ser informado")
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "empresa_id", 
 	        nullable = false, 
