@@ -1,0 +1,34 @@
+1 - Várivel de ambiente para todos os projeto Spring e ela altera todo os projeto em um servidor.
+SPRING_PROFILES_ACTIVE
+
+====================================================================================
+2 - Não vamos usar a várivel SPRING_PROFILES_ACTIVE, vamos usar um propria.
+
+
+====================================================================================
+3 - Criando a variavel no Windows em dev e prod:
+
+	[Environment]::SetEnvironmentVariable(
+	    "SPRING_PROFILES_JDEV_ERP_PRO",
+	    "dev",
+	    "User"
+	)
+	
+	echo $env:SPRING_PROFILES_JDEV_ERP_PRO
+	
+	OBS: Para produção em Windows:
+	
+	[Environment]::SetEnvironmentVariable(
+	    "SPRING_PROFILES_JDEV_ERP_PRO",
+	    "prod",
+	    "User"
+	)
+	
+
+====================================================================================	
+4 - Criando a variavel no Linux em dev e prod apenas altere o valor da variavel:
+
+	echo 'export SPRING_PROFILES_JDEV_ERP_PRO=prod' >> ~/.bashrc
+	source ~/.bashrc
+	
+	echo "$SPRING_PROFILES_JDEV_ERP_PRO"
