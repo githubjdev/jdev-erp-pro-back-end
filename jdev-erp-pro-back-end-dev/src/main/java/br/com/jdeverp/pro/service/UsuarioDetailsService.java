@@ -6,12 +6,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import br.com.jdeverp.pro.exception.MsgApiException;
 import br.com.jdeverp.pro.model.Usuario;
 import br.com.jdeverp.pro.repository.UsuarioRepository;
 
 @Service
+@Transactional(readOnly = true)
 public class UsuarioDetailsService implements UserDetailsService {
 
 	@Autowired
@@ -48,8 +50,9 @@ public class UsuarioDetailsService implements UserDetailsService {
 		
 		boolean existe = usuarioRepository.existsByTokenParaUser(token, idUsuario, idEmpresa);
 		
+		/*O token não é o gravado no usuário: houve um login mais novo (ou o usuário mudou/foi removido)*/
 		if(!existe) {
-			throw new MsgApiException("Usuário não autenticado ou token inválido.", HttpStatus.UNAUTHORIZED);
+			throw new MsgApiException("Sessão encerrada ou substituída por um novo login, faça login novamente.", HttpStatus.UNAUTHORIZED);
 		}
 	}
 

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,10 +13,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.jdeverp.pro.dto.RoleDTO;
 import br.com.jdeverp.pro.model.Role;
 import br.com.jdeverp.pro.service.RoleService;
 import jakarta.validation.Valid;
 
+@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 @RestController
 @RequestMapping("/api/role")
 public class RoleController {
@@ -24,31 +27,31 @@ public class RoleController {
         private RoleService roleService;
         
         @PostMapping("/salvar")
-        public ResponseEntity<Role> salvar(@RequestBody @Valid Role role){
+        public ResponseEntity<RoleDTO> salvar(@RequestBody @Valid Role role){
         		return ResponseEntity.ok(roleService.salvar(role));
         }
         
         
         @PostMapping("/atualizar")
-        public ResponseEntity<Role> atualizar(@RequestBody @Valid Role role){
+        public ResponseEntity<RoleDTO> atualizar(@RequestBody @Valid Role role){
         		return ResponseEntity.ok(roleService.atualizar(role));
         }
 
         @GetMapping("/listar")
-        public ResponseEntity<List<Role>> findAll() {
+        public ResponseEntity<List<RoleDTO>> findAll() {
                 return ResponseEntity.ok(roleService.listar());
         }
 
         @GetMapping("/buscarPorId/{id}")
-        public ResponseEntity<Role> buscarPorId(@PathVariable Long id) {
+        public ResponseEntity<RoleDTO> buscarPorId(@PathVariable Long id) {
                 return roleService.buscarPorId(id)
                                 .map(ResponseEntity::ok)
                                 .orElseGet(() -> ResponseEntity.notFound().build());
         }
 
         @GetMapping("/buscaPorAcesso/{acesso}")
-        public ResponseEntity<List<Role>> buscaPorAcesso(@PathVariable String acesso) {
-                return ResponseEntity.ok(roleService.buscaPorAcesso(acesso));
+        public ResponseEntity<List<RoleDTO>> buscaPorAcesso(@PathVariable String acesso) {
+                return ResponseEntity.ok(roleService.buscaPorAcessoDto(acesso));
         }
 
         @GetMapping("/existePorAcesso/{acesso}")

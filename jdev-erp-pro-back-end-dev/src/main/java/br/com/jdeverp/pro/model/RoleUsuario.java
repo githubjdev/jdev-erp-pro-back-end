@@ -12,17 +12,22 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "role_usuario", uniqueConstraints = {
 		@UniqueConstraint(name = "unique_role_user", columnNames = { "acesso_id", "usuario_id" }) })
 @SequenceGenerator(name = "seq_role_usuario", sequenceName = "seq_role_usuario", allocationSize = 1, initialValue = 1)
-public class RoleUsuario {
+public class RoleUsuario extends EntidadeBase {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_role_usuario")
+	@ToString.Include
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY)

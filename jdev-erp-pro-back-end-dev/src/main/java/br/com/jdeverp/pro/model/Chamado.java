@@ -20,20 +20,26 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "chamado")
 @SequenceGenerator(name = "seq_chamado", sequenceName = "seq_chamado", allocationSize = 1, initialValue = 1)
-public class Chamado {
+public class Chamado extends EntidadeBase {
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_chamado")
+	@ToString.Include
 	private Long id;
 	
 	@NotNull(message = "Título do chamado deve ser informado")
 	@Column(nullable = false)
+	@ToString.Include
 	private String titulo;
 	
 	@NotNull(message = "Descrição do chamado deve ser informado")
@@ -43,22 +49,27 @@ public class Chamado {
 	@NotNull(message = "Tipo do chamado deve ser informado")
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
+	@ToString.Include
 	private TipoChamado tipoChamado;;
 	
 	@NotNull(message = "Prioridade do chamado deve ser informado")
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
+	@ToString.Include
 	private PrioridadeChamado prioridadeChamado;
 	
 	@NotNull(message = "Status do chamado deve ser informado")
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
+	@ToString.Include
 	private StatusChamado statusChamado;
 	
-	@NotNull(message = "Data de abertura do chamado é obrigatória")
+	/* Sem @NotNull: o service preenche com a data de hoje. A coluna continua NOT NULL. */
 	@Column(nullable = false)
+	@ToString.Include
 	private LocalDate dataAbertura;
 	
+	@ToString.Include
 	private LocalDate dataFechamento;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -93,7 +104,7 @@ public class Chamado {
 	
 	
 	
-    @NotNull(message = "Empresa deve ser informada corretamente")
+    /* Sem @NotNull: a empresa vem do usuário logado (service), nunca do request. A coluna continua NOT NULL. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "empresa_id", 
             nullable = false,

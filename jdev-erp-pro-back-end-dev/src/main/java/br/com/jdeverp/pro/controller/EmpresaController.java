@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,6 +18,8 @@ import br.com.jdeverp.pro.model.Empresa;
 import br.com.jdeverp.pro.service.EmpresaService;
 import jakarta.validation.Valid;
 
+/*Empresa é dado global: só ROLE_ADMIN. Exceção: buscarPorId, em que o usuário comum vê só a própria empresa (regra no service)*/
+@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 @RestController
 @RequestMapping("/api/empresa")
 public class EmpresaController {
@@ -34,6 +37,7 @@ public class EmpresaController {
                 return ResponseEntity.ok(empresaService.atualizar(empresa));
         }
 
+        @PreAuthorize("isAuthenticated()")
         @GetMapping("/buscarPorId/{id}")
         public ResponseEntity<EmpresaDTO> buscarPorId(@PathVariable Long id) {
                 return ResponseEntity.ok(empresaService.buscaPorId(id));

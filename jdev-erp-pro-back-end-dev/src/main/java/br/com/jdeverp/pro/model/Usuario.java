@@ -28,9 +28,13 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "usuario", uniqueConstraints = {
 		@UniqueConstraint(name="unique_cliente_funcionario", columnNames = {"cliente_funcionario_id"}),
@@ -38,17 +42,19 @@ import lombok.Data;
 		@UniqueConstraint(name="unique_senha", columnNames = {"senha"})
 })
 @SequenceGenerator(name = "seq_usuario", sequenceName = "seq_usuario", allocationSize = 1)
-public class Usuario implements UserDetails {
+public class Usuario extends EntidadeBase implements UserDetails {
 
 	private static final long serialVersionUID = 1L;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_usuario")
+	@ToString.Include
 	private Long id;
 	
 	@JsonIgnore
 	@NotBlank(message = "Login deve ser informado")
 	@Column(nullable = false, unique = true)
+	@ToString.Include
 	private String login;
 	
 	@JsonIgnore
@@ -57,6 +63,7 @@ public class Usuario implements UserDetails {
 	private String senha;
 	
 	@JsonIgnore
+	@ToString.Include
 	private Boolean liberado = true;
 	
 	@JsonIgnore

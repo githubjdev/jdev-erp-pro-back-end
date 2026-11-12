@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,11 +13,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.jdeverp.pro.dto.RoleUsuarioDTO;
 import br.com.jdeverp.pro.model.RoleUsuario;
 import br.com.jdeverp.pro.service.RoleUsuarioService;
 import br.com.jdeverp.pro.service.UsuarioLogadoService;
 import jakarta.validation.Valid;
 
+@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 @RestController
 @RequestMapping("/api/roleUsuario")
 public class RoleUsuarioController {
@@ -28,36 +31,36 @@ public class RoleUsuarioController {
         private UsuarioLogadoService usuarioLogadoService;
 
         @PostMapping("/salvar")
-        public ResponseEntity<RoleUsuario> salvar(@RequestBody @Valid RoleUsuario roleUsuario) {
-                return ResponseEntity.ok(roleUsuarioService.salvar(roleUsuario));
+        public ResponseEntity<RoleUsuarioDTO> salvar(@RequestBody @Valid RoleUsuario roleUsuario) {
+                return ResponseEntity.ok(roleUsuarioService.salvarDto(roleUsuario));
         }
         
         
         @PostMapping("/atualizar")
-        public ResponseEntity<RoleUsuario> atualizar(@RequestBody @Valid RoleUsuario roleUsuario) {
+        public ResponseEntity<RoleUsuarioDTO> atualizar(@RequestBody @Valid RoleUsuario roleUsuario) {
                 return ResponseEntity.ok(roleUsuarioService.atualizar(roleUsuario));
         }
 
         @GetMapping("/listar")
-        public ResponseEntity<List<RoleUsuario>> listar() {
+        public ResponseEntity<List<RoleUsuarioDTO>> listar() {
                 return ResponseEntity.ok(roleUsuarioService.listar());
         }
 
         @GetMapping("/buscarPorId/{id}")
-        public ResponseEntity<RoleUsuario> buscarPorId(@PathVariable Long id) {
+        public ResponseEntity<RoleUsuarioDTO> buscarPorId(@PathVariable Long id) {
                 return roleUsuarioService.buscarPorId(id)
                                 .map(ResponseEntity::ok)
                                 .orElseGet(() -> ResponseEntity.notFound().build());
         }
 
         @GetMapping("/listarPorUsuario/{idUsuario}")
-        public ResponseEntity<List<RoleUsuario>> findAllByUsuario(@PathVariable Long idUsuario) {
+        public ResponseEntity<List<RoleUsuarioDTO>> findAllByUsuario(@PathVariable Long idUsuario) {
                 return ResponseEntity.ok(roleUsuarioService.findAllByUsuario(idUsuario,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/listarPorRole/{idRole}")
-        public ResponseEntity<List<RoleUsuario>> findAllByRoleAndEmpresa(@PathVariable Long idRole) {
+        public ResponseEntity<List<RoleUsuarioDTO>> findAllByRoleAndEmpresa(@PathVariable Long idRole) {
                 return ResponseEntity.ok(roleUsuarioService.findAllByRoleAndEmpresa(idRole,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }

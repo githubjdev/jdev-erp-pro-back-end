@@ -1,5 +1,6 @@
 package br.com.jdeverp.pro.dto;
 
+import br.com.jdeverp.pro.enums.TipoClienteFuncionario;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -12,7 +13,7 @@ public class UsuarioDto {
 	private String pessoa;
 	private Boolean liberado = true;
 	private String empresa;
-	private String tipoClienteFuncionario;
+	private TipoClienteFuncionario tipoClienteFuncionario;
 	
 	@NotBlank(message = "Login deve ser informado.")
 	private String login;

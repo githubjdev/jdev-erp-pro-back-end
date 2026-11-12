@@ -5,10 +5,13 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import br.com.jdeverp.pro.dto.ItemPedidoDTO;
 import br.com.jdeverp.pro.exception.MsgApiException;
 import br.com.jdeverp.pro.model.ItemPedido;
 import br.com.jdeverp.pro.model.Pedido;
@@ -23,6 +26,7 @@ import jakarta.persistence.PersistenceContext;
  * Dentro do service vc pode criar infinitos métodos, gerar grafico, api de pagamento, gerar relatorio e etc*/
 
 @Service
+@Transactional(readOnly = true)
 public class ItemPedidoService {
 
 	@Autowired /* Injeção de dependência */
@@ -41,7 +45,8 @@ public class ItemPedidoService {
 	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
 
-	public ItemPedido salvar(ItemPedido itemPedido) {
+	@Transactional
+	public ItemPedidoDTO salvar(ItemPedido itemPedido) {
 		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
 		Pedido pedido = validarPedido(itemPedido.getPedido(), empresaId);
 		Produto produto = validarProduto(itemPedido.getProduto(), empresaId);
@@ -53,10 +58,11 @@ public class ItemPedidoService {
 		itemPedido.setPedido(pedido);
 		itemPedido.setProduto(produto);
 		itemPedido.setEmpresa(usuarioLogadoService.getEmpresaLogada());
-		return itemPedidoRepository.saveAndFlush(itemPedido);
+		return converterParaDto(itemPedidoRepository.saveAndFlush(itemPedido));
 	}
 
-	public ItemPedido atualizar(ItemPedido itemPedido) {
+	@Transactional
+	public ItemPedidoDTO atualizar(ItemPedido itemPedido) {
 		if (itemPedido.getId() == null) {
 			throw new MsgApiException("Id do item do pedido não informado para atualizar.");
 		}
@@ -78,7 +84,7 @@ public class ItemPedidoService {
 		existente.setTotal(itemPedido.getTotal());
 		existente.setProduto(produto);
 		existente.setPedido(pedido);
-		return itemPedidoRepository.saveAndFlush(existente);
+		return converterParaDto(itemPedidoRepository.saveAndFlush(existente));
 	}
 
 	private Pedido validarPedido(Pedido pedido, Long empresaId) {
@@ -99,13 +105,13 @@ public class ItemPedidoService {
 				.orElseThrow(() -> new MsgApiException("Produto não encontrado para a empresa logada."));
 	}
 
-	public List<ItemPedido> findAll(Long idPedido, Long idEmpresa) {
-		
-		return itemPedidoRepository.findAll(idPedido, idEmpresa);
+	public List<ItemPedidoDTO> findAll(Long idPedido, Long idEmpresa) {
+
+		return converterListaParaDto(itemPedidoRepository.findAll(idPedido, idEmpresa));
 	}
 
-	public List<ItemPedido> buscaPorNome(String nome, Long idPedido, Long idEmpresa) {
-		return itemPedidoRepository.buscaPorNome(nome, idPedido, idEmpresa);
+	public List<ItemPedidoDTO> buscaPorNome(String nome, Long idPedido, Long idEmpresa) {
+		return converterListaParaDto(itemPedidoRepository.buscaPorNome(nome, idPedido, idEmpresa));
 	}
 
 	public boolean existePorNome(String nome, Long idPedido, Long idEmpresa) {
@@ -116,6 +122,7 @@ public class ItemPedidoService {
 		return itemPedidoRepository.existePorNomeDiferenteId(id, nome, idPedido, idEmpresa);
 	}
 
+	@Transactional
 	public void deleteById(Long id, Long idPedido, Long idEmpresa) {
 		if (!itemPedidoRepository.buscarPorId(id, idEmpresa).filter(item -> item.getPedido() != null && item.getPedido().getId().equals(idPedido)).isPresent()) {
 			throw new MsgApiException("Item do pedido não encontrado ou já foi deletado.");
@@ -124,7 +131,17 @@ public class ItemPedidoService {
 		itemPedidoRepository.deleteById(id, idPedido, idEmpresa);
 	}
 
+	/*Exclusão em lote apaga tudo da empresa: só ROLE_ADMIN (P21)*/
+	private void exigirAdminParaExclusaoEmLote() {
+		if (!usuarioLogadoService.isAdmin()) {
+			throw new MsgApiException("Apenas administradores podem excluir registros em lote.", HttpStatus.FORBIDDEN);
+		}
+	}
+
+	@Transactional
 	public long deleteAll(Long empresaID) {
+		exigirAdminParaExclusaoEmLote();
+
 		if (itemPedidoRepository.total(empresaID) == 0) {
 			throw new MsgApiException("Nenhum item de pedido encontrado para deletar ou todos já foram deletados.");
 		}
@@ -132,7 +149,10 @@ public class ItemPedidoService {
 		return itemPedidoRepository.deleteAll(empresaID);
 	}
 
+	@Transactional
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		exigirAdminParaExclusaoEmLote();
+
 		List<Long> encontrados = itemPedidoRepository.buscarPorIds(ids, empresaId).stream().map(ItemPedido::getId).toList();
 		List<Long> naoEncontrados = new ArrayList<>();
 		ids.forEach(id -> {
@@ -152,38 +172,38 @@ public class ItemPedidoService {
 		itemPedidoRepository.deletarAllById(ids, empresaId);
 	}
 
-	public List<ItemPedido> buscarPorIds(Iterable<Long> ids, Long empresaId) {
-		return itemPedidoRepository.buscarPorIds(ids, empresaId);
+	public List<ItemPedidoDTO> buscarPorIds(Iterable<Long> ids, Long empresaId) {
+		return converterListaParaDto(itemPedidoRepository.buscarPorIds(ids, empresaId));
 	}
 
 	public boolean existsById(Long id, Long empresaId) {
 		return itemPedidoRepository.existsById(id, empresaId);
 	}
 
-	public List<ItemPedido> listar(Long empresaId) {
-		return itemPedidoRepository.listar(empresaId);
+	public List<ItemPedidoDTO> listar(Long empresaId) {
+		return converterListaParaDto(itemPedidoRepository.listar(empresaId));
 	}
 
-	public Optional<ItemPedido> buscarPorId(Long id, Long empresaId) {
-		return itemPedidoRepository.buscarPorId(id, empresaId);
+	public Optional<ItemPedidoDTO> buscarPorId(Long id, Long empresaId) {
+		return itemPedidoRepository.buscarPorId(id, empresaId).map(this::converterParaDto);
 	}
 
 	public long total(Long empresaId) {
 		return itemPedidoRepository.total(empresaId);
 	}
 
-	public Page<ItemPedido> listarPaginado(Long empresaId, Pageable pageable) {
-		return itemPedidoRepository.listarPaginado(empresaId, pageable);
+	public Page<ItemPedidoDTO> listarPaginado(Long empresaId, Pageable pageable) {
+		return itemPedidoRepository.listarPaginado(empresaId, pageable).map(this::converterParaDto);
 	}
 
 	// ====================Métodos específicos para Pedido====================
 
-	public List<ItemPedido> findAllByPedido(Long idPedido, Long idEmpresa) {
-		return itemPedidoRepository.findAllByPedido(idPedido, idEmpresa);
+	public List<ItemPedidoDTO> findAllByPedido(Long idPedido, Long idEmpresa) {
+		return converterListaParaDto(itemPedidoRepository.findAllByPedido(idPedido, idEmpresa));
 	}
 
-	public List<ItemPedido> buscaPorNomePorPedido(String nome, Long idPedido, Long idEmpresa) {
-		return itemPedidoRepository.buscaPorNomePorPedido(nome, idPedido, idEmpresa);
+	public List<ItemPedidoDTO> buscaPorNomePorPedido(String nome, Long idPedido, Long idEmpresa) {
+		return converterListaParaDto(itemPedidoRepository.buscaPorNomePorPedido(nome, idPedido, idEmpresa));
 	}
 
 	public boolean existePorNomePorPedido(String nome, Long idPedido, Long idEmpresa) {
@@ -194,12 +214,34 @@ public class ItemPedidoService {
 		return itemPedidoRepository.existePorNomeDiferenteIdPorPedido(id, nome, idPedido, idEmpresa);
 	}
 
+	@Transactional
 	public void deleteByIdAndPedido(Long id, Long idPedido, Long idEmpresa) {
 		if (!itemPedidoRepository.buscarPorId(id, idEmpresa).filter(item -> item.getPedido() != null && item.getPedido().getId().equals(idPedido)).isPresent()) {
 			throw new MsgApiException("Item do pedido não encontrado ou já foi deletado.");
 		}
 
 		itemPedidoRepository.deleteByIdAndPedido(id, idPedido, idEmpresa);
+	}
+
+	// ====================Conversão para DTO====================
+
+	private ItemPedidoDTO converterParaDto(ItemPedido itemPedido) {
+		ItemPedidoDTO dto = new ItemPedidoDTO();
+		dto.setId(itemPedido.getId());
+		dto.setQuantidade(itemPedido.getQuantidade());
+		dto.setSubTotal(itemPedido.getSubTotal());
+		dto.setDesconto(itemPedido.getDesconto());
+		dto.setTotal(itemPedido.getTotal());
+		dto.setProdutoId(itemPedido.getProduto().getId());
+		dto.setProdutoNome(itemPedido.getProduto().getNome());
+		dto.setPedidoId(itemPedido.getPedido().getId());
+		dto.setNumeroPedido(itemPedido.getPedido().getNumeroPedido());
+		dto.setEmpresaId(itemPedido.getEmpresa().getId());
+		return dto;
+	}
+
+	private List<ItemPedidoDTO> converterListaParaDto(List<ItemPedido> itens) {
+		return itens.stream().map(this::converterParaDto).toList();
 	}
 
 	// ====================dentro dos métodos do

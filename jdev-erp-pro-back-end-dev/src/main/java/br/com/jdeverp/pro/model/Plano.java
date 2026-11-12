@@ -15,19 +15,23 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import lombok.ToString;
 
 @Entity
 @Table(name = "plano")
 @SequenceGenerator(name = "seq_plano", sequenceName = "seq_plano", allocationSize = 1, initialValue = 1)
-public class Plano {
+@ToString(onlyExplicitlyIncluded = true)
+public class Plano extends EntidadeBase {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_plano")
+	@ToString.Include
 	private Long id;
 
 	@NotBlank(message = "Nome deve ser informado")
 	@NotEmpty(message = "Nome não pode ser nulo")
 	@Column(nullable = false)
+	@ToString.Include
 	private String nome;
 
 	@NotBlank(message = "Descrição deve ser informado")
@@ -35,29 +39,38 @@ public class Plano {
 	@Column(nullable = false)
 	private String descricao;
 
+	@ToString.Include
 	private Boolean ativo;
 
+	/*
+	 * Igual ao CHECK plano_valor_mensal_check do banco: FREE vale 0; os demais,
+	 * de R$ 49 a R$ 200. A regra por tipo fica no PlanoService.validarValorMensal().
+	 */
 	@NotNull(message = "Valor mensal não pode ser nulo")
-	@Min(value = 49, message = "Valor minimo do plano deve ser de R$ 49 reais")
+	@Min(value = 0, message = "Valor mensal do plano não pode ser negativo")
 	@Max(value = 200, message = "Valor do plano deve ser no máximo de R$ 200 reais")
 	@Column(nullable = false)
+	@ToString.Include
 	private Double valorMensal;
 
 	@NotNull(message = "Limite de usuário não pode ser nulo")
 	@Min(value = 1, message = "Limite minimo de usuário é 1")
 	@Max(value = 150, message = "Limite máximo do usuário é 150")
 	@Column(nullable = false)
+	@ToString.Include
 	private Integer limiteUsuario;
 
 	@NotNull(message = "Limite de cliente não pode ser nulo")
 	@Min(value = 1, message = "Limite minimo de cliente é 1")
 	@Max(value = 150, message = "Limite máximo de cliente é 150")
 	@Column(nullable = false)
+	@ToString.Include
 	private Integer limiteCliente;
 
 	@NotNull(message = "Tipo do plano não pode ser nulo")
 	@Column(nullable = false)
 	@Enumerated(EnumType.STRING)
+	@ToString.Include
 	private TipoPlano tipoPlano;
 	
 	/*Deixamos comentado porque o banco pode crescer muito e ter 500, 1000, 2000 empresaas para um 1 plano e ficar lento

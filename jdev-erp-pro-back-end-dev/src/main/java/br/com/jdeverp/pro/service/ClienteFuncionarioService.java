@@ -5,9 +5,11 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import br.com.jdeverp.pro.dto.ClienteFuncionarioDTO;
 import br.com.jdeverp.pro.exception.MsgApiException;
@@ -24,6 +26,7 @@ import jakarta.persistence.PersistenceContext;
  * Dentro do service vc pode criar infinitos métodos, gerar grafico, api de pagamento, gerar relatorio e etc*/
 
 @Service
+@Transactional(readOnly = true)
 public class ClienteFuncionarioService {
 
 	@Autowired /* Injeção de dependência */
@@ -42,32 +45,54 @@ public class ClienteFuncionarioService {
 	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
 
+	@Transactional
 	public ClienteFuncionarioDTO salvar(ClienteFuncionario clienteFuncionario ) {
-		
-		
-		if (clienteFuncionarioRepository.existeParaPessoa(clienteFuncionario.getPessoa().getId(), usuarioLogadoService.getEmpresaIdLogada())) {
+
+		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
+
+		/*A pessoa precisa ser da empresa logada*/
+		Pessoa pessoa = validarPessoa(clienteFuncionario.getPessoa(), empresaId);
+
+		if (clienteFuncionarioRepository.existeParaPessoa(pessoa.getId(), empresaId)) {
 			throw new MsgApiException("Já existe um cliente/funcionário cadastrado para a pessoa informada.");
 		}
-		
+
+		/*O usuário é opcional no cadastro, mas se vier precisa ser da empresa logada*/
+		Usuario usuario = clienteFuncionario.getUsuario() == null || clienteFuncionario.getUsuario().getId() == null
+				? null : validarUsuario(clienteFuncionario.getUsuario(), empresaId);
+
+		clienteFuncionario.setPessoa(pessoa);
+		clienteFuncionario.setUsuario(usuario);
 		clienteFuncionario.setEmpresa(usuarioLogadoService.getEmpresaLogada());
 		clienteFuncionario = clienteFuncionarioRepository.saveAndFlush(clienteFuncionario);
-		
-		ClienteFuncionarioDTO dto = new ClienteFuncionarioDTO();
-		dto.setId(clienteFuncionario.getId());
-		dto.setTipoClienteFuncionario(clienteFuncionario.getTipoClienteFuncionario().name());
-		dto.setUsuarioId(clienteFuncionario.getUsuario() != null ? clienteFuncionario.getUsuario().getId() : null);
-		dto.setPessoaId(clienteFuncionario.getPessoa().getId());
-		dto.setNomePessoa(clienteFuncionario.getPessoa().getNome());
-		dto.setEmpresaId(clienteFuncionario.getEmpresa().getId());
-		
-		return dto;
-	} 
-	
-	
+
+		return converterParaDto(clienteFuncionario);
+	}
+
+
+	/**
+	 * Devolve a entidade: é usado pelo UsuarioService ao vincular o usuário criado.
+	 */
+	@Transactional
 	public ClienteFuncionario salvarClienteFunUser(ClienteFuncionario clienteFuncionario ) {
 		return clienteFuncionarioRepository.saveAndFlush(clienteFuncionario);
-	} 
+	}
 
+	private Pessoa validarPessoa(Pessoa pessoa, Long empresaId) {
+		if (pessoa == null || pessoa.getId() == null) {
+			throw new MsgApiException("Pessoa deve ser informada para o cadastro.");
+		}
+
+		return pessoaRepository.buscarPorId(pessoa.getId(), empresaId)
+				.orElseThrow(() -> new MsgApiException("Pessoa não encontrada para a empresa logada."));
+	}
+
+	private Usuario validarUsuario(Usuario usuario, Long empresaId) {
+		return usuarioRepository.buscarPorId(usuario.getId(), empresaId)
+				.orElseThrow(() -> new MsgApiException("Usuário não encontrado para a empresa logada."));
+	}
+
+	@Transactional
 	public ClienteFuncionarioDTO atualizar(ClienteFuncionario clienteFuncionario) {
 		if (clienteFuncionario.getId() == null) {
 			throw new MsgApiException("Id do cliente/funcionário não informado para atualizar.");
@@ -97,25 +122,17 @@ public class ClienteFuncionarioService {
 		clienteFuncionario.setUsuario(usuario);
 		
 		clienteFuncionario = clienteFuncionarioRepository.saveAndFlush(clienteFuncionario);
-		
-		ClienteFuncionarioDTO dto = new ClienteFuncionarioDTO();
-		dto.setId(clienteFuncionario.getId());
-		dto.setTipoClienteFuncionario(clienteFuncionario.getTipoClienteFuncionario().name());
-		dto.setUsuarioId(clienteFuncionario.getUsuario() != null ? clienteFuncionario.getUsuario().getId() : null);
-		dto.setPessoaId(clienteFuncionario.getPessoa().getId());
-		dto.setNomePessoa(clienteFuncionario.getPessoa().getNome());
-		dto.setEmpresaId(clienteFuncionario.getEmpresa().getId());
-		
-		return dto;
+
+		return converterParaDto(clienteFuncionario);
 	}
 
 	public List<ClienteFuncionario> findAll(Long idEmpresa) {
-		
+
 		return clienteFuncionarioRepository.findAll(idEmpresa);
 	}
 
-	public List<ClienteFuncionario> buscaPorNome(String nome, Long idEmpresa) {
-		return clienteFuncionarioRepository.buscaPorNome(nome, idEmpresa);
+	public List<ClienteFuncionarioDTO> buscaPorNome(String nome, Long idEmpresa) {
+		return converterListaParaDto(clienteFuncionarioRepository.buscaPorNome(nome, idEmpresa));
 	}
 
 	public boolean existePorNome(String nome, Long idEmpresa) {
@@ -126,6 +143,7 @@ public class ClienteFuncionarioService {
 		return clienteFuncionarioRepository.existePorNomeDiferenteId(id, nome, idEmpresa);
 	}
 
+	@Transactional
 	public void deleteById(Long id, Long idEmpresa) {
 		if (!clienteFuncionarioRepository.existsById(id, idEmpresa)) {
 			throw new MsgApiException("Cliente/funcionário não encontrado ou já foi deletado.");
@@ -134,7 +152,17 @@ public class ClienteFuncionarioService {
 		clienteFuncionarioRepository.deleteById(id, idEmpresa);
 	}
 
+	/*Exclusão em lote apaga tudo da empresa: só ROLE_ADMIN (P21)*/
+	private void exigirAdminParaExclusaoEmLote() {
+		if (!usuarioLogadoService.isAdmin()) {
+			throw new MsgApiException("Apenas administradores podem excluir registros em lote.", HttpStatus.FORBIDDEN);
+		}
+	}
+
+	@Transactional
 	public long deleteAll(Long empresaID) {
+		exigirAdminParaExclusaoEmLote();
+
 		if (clienteFuncionarioRepository.total(empresaID) == 0) {
 			throw new MsgApiException("Nenhum cliente/funcionário encontrado para deletar ou todos já foram deletados.");
 		}
@@ -142,7 +170,10 @@ public class ClienteFuncionarioService {
 		return clienteFuncionarioRepository.deleteAll(empresaID);
 	}
 
+	@Transactional
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		exigirAdminParaExclusaoEmLote();
+
 		List<Long> encontrados = clienteFuncionarioRepository.buscarPorIds(ids, empresaId).stream().map(ClienteFuncionario::getId).toList();
 		List<Long> naoEncontrados = new ArrayList<>();
 		ids.forEach(id -> {
@@ -162,8 +193,8 @@ public class ClienteFuncionarioService {
 		clienteFuncionarioRepository.deletarAllById(ids, empresaId);
 	}
 
-	public List<ClienteFuncionario> buscarPorIds(Iterable<Long> ids, Long empresaId) {
-		return clienteFuncionarioRepository.buscarPorIds(ids, empresaId);
+	public List<ClienteFuncionarioDTO> buscarPorIds(Iterable<Long> ids, Long empresaId) {
+		return converterListaParaDto(clienteFuncionarioRepository.buscarPorIds(ids, empresaId));
 	}
 
 	public boolean existsById(Long id, Long empresaId) {
@@ -171,46 +202,57 @@ public class ClienteFuncionarioService {
 	}
 
 	public List<ClienteFuncionarioDTO> listar(Long empresaId) {
-		
-		List<ClienteFuncionarioDTO> clienteFuncionarioDTOs = new ArrayList<ClienteFuncionarioDTO>();
-		List<ClienteFuncionario> clientesFuncionarios = clienteFuncionarioRepository.listar(empresaId);
-		
-		for (ClienteFuncionario clienteFuncionario : clientesFuncionarios) {
-			ClienteFuncionarioDTO dto = new ClienteFuncionarioDTO();
-			
-			dto.setId(clienteFuncionario.getId());
-			dto.setTipoClienteFuncionario(clienteFuncionario.getTipoClienteFuncionario().name());
-			dto.setUsuarioId(clienteFuncionario.getUsuario() != null ? clienteFuncionario.getUsuario().getId() : null);
-			dto.setPessoaId(clienteFuncionario.getPessoa().getId());
-			dto.setNomePessoa(clienteFuncionario.getPessoa().getNome());
-			dto.setEmpresaId(clienteFuncionario.getEmpresa().getId());
-
-			clienteFuncionarioDTOs.add(dto);
-		}
-		
-		return clienteFuncionarioDTOs;
+		return converterListaParaDto(clienteFuncionarioRepository.listar(empresaId));
 	}
 
-	public Optional<ClienteFuncionario> buscarPorId(Long id, Long empresaId) {
-		return clienteFuncionarioRepository.buscarPorId(id, empresaId);
+	public Optional<ClienteFuncionarioDTO> buscarPorId(Long id, Long empresaId) {
+		return clienteFuncionarioRepository.buscarPorId(id, empresaId).map(this::converterParaDto);
 	}
 
 	public long total(Long empresaId) {
 		return clienteFuncionarioRepository.total(empresaId);
 	}
 
-	public Page<ClienteFuncionario> listarPaginado(Long empresaId, Pageable pageable) {
-		return clienteFuncionarioRepository.listarPaginado(empresaId, pageable);
+	public Page<ClienteFuncionarioDTO> listarPaginado(Long empresaId, Pageable pageable) {
+		return clienteFuncionarioRepository.listarPaginado(empresaId, pageable).map(this::converterParaDto);
 	}
-	
-	
+
+
+	/**
+	 * Devolve a entidade: é usado pelo UsuarioService ao cadastrar e atualizar o usuário.
+	 * Para o controller, use findByPessoaDto.
+	 */
 	public ClienteFuncionario findByPessoa(Long idPessoa, Long idEmpresa) {
 		return clienteFuncionarioRepository.findByPessoa(idPessoa, idEmpresa);
 	}
-	
-	
+
+
+	public ClienteFuncionarioDTO findByPessoaDto(Long idPessoa, Long idEmpresa) {
+		ClienteFuncionario clienteFuncionario = clienteFuncionarioRepository.findByPessoa(idPessoa, idEmpresa);
+		return clienteFuncionario != null ? converterParaDto(clienteFuncionario) : null;
+	}
+
+
+	@Transactional
 	public void removeUserClienteFuncionarioId(Long id, Long idEmpresa) {
 		clienteFuncionarioRepository.removeUserClienteFuncionarioId(id, idEmpresa);
+	}
+
+	// ====================Conversão para DTO====================
+
+	private ClienteFuncionarioDTO converterParaDto(ClienteFuncionario clienteFuncionario) {
+		ClienteFuncionarioDTO dto = new ClienteFuncionarioDTO();
+		dto.setId(clienteFuncionario.getId());
+		dto.setTipoClienteFuncionario(clienteFuncionario.getTipoClienteFuncionario());
+		dto.setUsuarioId(clienteFuncionario.getUsuario() != null ? clienteFuncionario.getUsuario().getId() : null);
+		dto.setPessoaId(clienteFuncionario.getPessoa().getId());
+		dto.setNomePessoa(clienteFuncionario.getPessoa().getNome());
+		dto.setEmpresaId(clienteFuncionario.getEmpresa().getId());
+		return dto;
+	}
+
+	private List<ClienteFuncionarioDTO> converterListaParaDto(List<ClienteFuncionario> clientesFuncionarios) {
+		return clientesFuncionarios.stream().map(this::converterParaDto).toList();
 	}
 
 	// ====================dentro dos métodos do

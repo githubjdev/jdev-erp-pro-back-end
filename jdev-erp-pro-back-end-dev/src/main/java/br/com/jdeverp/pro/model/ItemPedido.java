@@ -16,24 +16,33 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "item_pedido")
 @SequenceGenerator(name = "seq_item_pedido", sequenceName = "seq_item_pedido", allocationSize = 1, initialValue = 1)
-public class ItemPedido {
+public class ItemPedido extends EntidadeBase {
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_item_pedido")
+	@ToString.Include
 	private Long id;
 	
 	@DecimalMin(value = "0.1", message = "Valor mínimo de 0.1 deve ser informado")
 	@Column(nullable = false)
+	@ToString.Include
 	private Double quantidade = 1.0;
 	
+	@ToString.Include
 	private BigDecimal subTotal = BigDecimal.ZERO;
+	@ToString.Include
 	private BigDecimal desconto = BigDecimal.ZERO;
+	@ToString.Include
 	private BigDecimal total = BigDecimal.ZERO;
 	
 	@NotNull(message = "Produto deve ser informado")
@@ -54,7 +63,7 @@ public class ItemPedido {
 	private Pedido pedido;
 	
 	
-	@NotNull(message = "Empresa deve ser informado")
+	/* Sem @NotNull: a empresa vem do usuário logado (service), nunca do request. A coluna continua NOT NULL. */
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "empresa_id", 
 	        nullable = false, 

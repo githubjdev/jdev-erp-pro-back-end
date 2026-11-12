@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import br.com.jdeverp.pro.anotacoes.IgnoreEmpresaId;
+import br.com.jdeverp.pro.enums.TipoPlano;
 import br.com.jdeverp.pro.model.Plano;
 import jakarta.transaction.Transactional;
 
@@ -39,8 +40,15 @@ public interface PlanoRepository extends JpaJdevRepository<Plano, Long> {
 	@Query("select count(p.id) > 0 from Plano p "
 			+ " where unaccent(upper(trim(p.nome))) "
 			+ " = unaccent(upper(trim(:nome))) and p.id <> :id")
-    boolean existePorNomeDiferenteId(@Param("id") Long id, @Param("nome") String nome);	
-	
+    boolean existePorNomeDiferenteId(@Param("id") Long id, @Param("nome") String nome);
+
+	/*Só pode haver um plano FREE, inserido direto no banco (P11)*/
+	@Query("select count(p.id) > 0 from Plano p where p.tipoPlano = :tipoPlano")
+	boolean existePorTipo(@Param("tipoPlano") TipoPlano tipoPlano);
+
+	@Query("select count(p.id) > 0 from Plano p where p.tipoPlano = :tipoPlano and p.id <> :id")
+	boolean existePorTipoDiferenteId(@Param("id") Long id, @Param("tipoPlano") TipoPlano tipoPlano);
+
 	/*Delete de um plano*/
 	@Transactional
 	@Modifying(flushAutomatically = true, clearAutomatically = true)

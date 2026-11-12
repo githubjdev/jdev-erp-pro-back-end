@@ -12,25 +12,31 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "role", uniqueConstraints = { 
 		@UniqueConstraint(columnNames = "acesso", name = "unique_acesso") 
 })
 @SequenceGenerator(name = "seq_role", sequenceName = "seq_role", allocationSize = 1, initialValue = 1)
-public class Role implements GrantedAuthority {
+public class Role extends EntidadeBase implements GrantedAuthority {
 
 
 	private static final long serialVersionUID = 1L;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_role")
+	@ToString.Include
 	private Long id;
 
 	@NotBlank(message = "Acesso deve ser informado")
 	@Column(nullable = false)
+	@ToString.Include
 	private String acesso;
 
 	/*Nome do acesso*/

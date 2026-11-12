@@ -5,15 +5,19 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import br.com.jdeverp.pro.dto.PedidoDTO;
 import br.com.jdeverp.pro.exception.MsgApiException;
 import br.com.jdeverp.pro.model.Pedido;
 import br.com.jdeverp.pro.model.Usuario;
 import br.com.jdeverp.pro.repository.PedidoRepository;
 import br.com.jdeverp.pro.repository.UsuarioRepository;
+import br.com.jdeverp.pro.util.DtoUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
@@ -21,6 +25,7 @@ import jakarta.persistence.PersistenceContext;
  * Dentro do service vc pode criar infinitos métodos, gerar grafico, api de pagamento, gerar relatorio e etc*/
 
 @Service
+@Transactional(readOnly = true)
 public class PedidoService {
 
 	@Autowired /* Injeção de dependência */
@@ -36,7 +41,8 @@ public class PedidoService {
 	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
 
-	public Pedido salvar(Pedido pedido) {
+	@Transactional
+	public PedidoDTO salvar(Pedido pedido) {
 		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
 		if (pedidoRepository.existePorNumeroPedido(pedido.getNumeroPedido(), empresaId)) {
 			throw new MsgApiException("Já existe um pedido com o mesmo número para a empresa logada.");
@@ -45,10 +51,11 @@ public class PedidoService {
 		pedido.setVendedor(validarUsuario(pedido.getVendedor(), empresaId));
 		pedido.setCliente(validarUsuario(pedido.getCliente(), empresaId));
 		pedido.setEmpresa(usuarioLogadoService.getEmpresaLogada());
-		return pedidoRepository.saveAndFlush(pedido);
+		return converterParaDto(pedidoRepository.saveAndFlush(pedido));
 	}
 
-	public Pedido atualizar(Pedido pedido) {
+	@Transactional
+	public PedidoDTO atualizar(Pedido pedido) {
 		if (pedido.getId() == null) {
 			throw new MsgApiException("Id do pedido não informado para atualizar.");
 		}
@@ -76,7 +83,7 @@ public class PedidoService {
 		existente.setObservacao(pedido.getObservacao());
 		existente.setVendedor(validarUsuario(pedido.getVendedor(), empresaId));
 		existente.setCliente(validarUsuario(pedido.getCliente(), empresaId));
-		return pedidoRepository.saveAndFlush(existente);
+		return converterParaDto(pedidoRepository.saveAndFlush(existente));
 	}
 
 	private Usuario validarUsuario(Usuario usuario, Long empresaId) {
@@ -88,13 +95,13 @@ public class PedidoService {
 				.orElseThrow(() -> new MsgApiException("Usuário relacionado não encontrado para a empresa logada."));
 	}
 
-	public List<Pedido> findAll(Long idEmpresa) {
-		
-		return pedidoRepository.findAll(idEmpresa);
+	public List<PedidoDTO> findAll(Long idEmpresa) {
+
+		return converterListaParaDto(pedidoRepository.findAll(idEmpresa));
 	}
 
-	public List<Pedido> buscaPorNumeroPedido(String numeroPedido, Long idEmpresa) {
-		return pedidoRepository.buscaPorNumeroPedido(numeroPedido, idEmpresa);
+	public List<PedidoDTO> buscaPorNumeroPedido(String numeroPedido, Long idEmpresa) {
+		return converterListaParaDto(pedidoRepository.buscaPorNumeroPedido(numeroPedido, idEmpresa));
 	}
 
 	public boolean existePorNumeroPedido(String numeroPedido, Long idEmpresa) {
@@ -105,6 +112,7 @@ public class PedidoService {
 		return pedidoRepository.existePorNumeroPedidoDiferenteId(id, numeroPedido, idEmpresa);
 	}
 
+	@Transactional
 	public void deleteById(Long id, Long idEmpresa) {
 		if (!pedidoRepository.existsById(id, idEmpresa)) {
 			throw new MsgApiException("Pedido não encontrado ou já foi deletado.");
@@ -113,7 +121,17 @@ public class PedidoService {
 		pedidoRepository.deleteById(id, idEmpresa);
 	}
 
+	/*Exclusão em lote apaga tudo da empresa: só ROLE_ADMIN (P21)*/
+	private void exigirAdminParaExclusaoEmLote() {
+		if (!usuarioLogadoService.isAdmin()) {
+			throw new MsgApiException("Apenas administradores podem excluir registros em lote.", HttpStatus.FORBIDDEN);
+		}
+	}
+
+	@Transactional
 	public long deleteAll(Long empresaID) {
+		exigirAdminParaExclusaoEmLote();
+
 		if (pedidoRepository.total(empresaID) == 0) {
 			throw new MsgApiException("Nenhum pedido encontrado para deletar ou todos já foram deletados.");
 		}
@@ -121,7 +139,10 @@ public class PedidoService {
 		return pedidoRepository.deleteAll(empresaID);
 	}
 
+	@Transactional
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		exigirAdminParaExclusaoEmLote();
+
 		List<Long> encontrados = pedidoRepository.buscarPorIds(ids, empresaId).stream().map(Pedido::getId).toList();
 		List<Long> naoEncontrados = new ArrayList<>();
 		ids.forEach(id -> {
@@ -141,28 +162,58 @@ public class PedidoService {
 		pedidoRepository.deletarAllById(ids, empresaId);
 	}
 
-	public List<Pedido> buscarPorIds(Iterable<Long> ids, Long empresaId) {
-		return pedidoRepository.buscarPorIds(ids, empresaId);
+	public List<PedidoDTO> buscarPorIds(Iterable<Long> ids, Long empresaId) {
+		return converterListaParaDto(pedidoRepository.buscarPorIds(ids, empresaId));
 	}
 
 	public boolean existsById(Long id, Long empresaId) {
 		return pedidoRepository.existsById(id, empresaId);
 	}
 
-	public List<Pedido> listar(Long empresaId) {
-		return pedidoRepository.listar(empresaId);
+	public List<PedidoDTO> listar(Long empresaId) {
+		return converterListaParaDto(pedidoRepository.listar(empresaId));
 	}
 
-	public Optional<Pedido> buscarPorId(Long id, Long empresaId) {
-		return pedidoRepository.buscarPorId(id, empresaId);
+	public Optional<PedidoDTO> buscarPorId(Long id, Long empresaId) {
+		return pedidoRepository.buscarPorId(id, empresaId).map(this::converterParaDto);
 	}
 
 	public long total(Long empresaId) {
 		return pedidoRepository.total(empresaId);
 	}
 
-	public Page<Pedido> listarPaginado(Long empresaId, Pageable pageable) {
-		return pedidoRepository.listarPaginado(empresaId, pageable);
+	public Page<PedidoDTO> listarPaginado(Long empresaId, Pageable pageable) {
+		return pedidoRepository.listarPaginado(empresaId, pageable).map(this::converterParaDto);
+	}
+
+	// ====================Conversão para DTO====================
+
+	private PedidoDTO converterParaDto(Pedido pedido) {
+		PedidoDTO dto = new PedidoDTO();
+		dto.setId(pedido.getId());
+		dto.setNumeroPedido(pedido.getNumeroPedido());
+		dto.setStatusPedido(pedido.getStatusPedido());
+		dto.setFormaPagamento(pedido.getFormaPagamento());
+		dto.setTipoPedido(pedido.getTipoPedido());
+		dto.setDataPedido(pedido.getDataPedido());
+		dto.setDataPagamento(pedido.getDataPagamento());
+		dto.setDataCancelamento(pedido.getDataCancelamento());
+		dto.setSubTotal(pedido.getSubTotal());
+		dto.setDesconto(pedido.getDesconto());
+		dto.setFrete(pedido.getFrete());
+		dto.setTaxas(pedido.getTaxas());
+		dto.setTotal(pedido.getTotal());
+		dto.setObservacao(pedido.getObservacao());
+		dto.setVendedorId(pedido.getVendedor().getId());
+		dto.setVendedorNome(DtoUtil.nomeUsuario(pedido.getVendedor()));
+		dto.setClienteId(pedido.getCliente().getId());
+		dto.setClienteNome(DtoUtil.nomeUsuario(pedido.getCliente()));
+		dto.setEmpresaId(pedido.getEmpresa().getId());
+		return dto;
+	}
+
+	private List<PedidoDTO> converterListaParaDto(List<Pedido> pedidos) {
+		return pedidos.stream().map(this::converterParaDto).toList();
 	}
 
 	// ====================dentro dos métodos do

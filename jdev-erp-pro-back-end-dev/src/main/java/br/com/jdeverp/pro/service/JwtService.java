@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import br.com.jdeverp.pro.exception.MsgApiException;
 import br.com.jdeverp.pro.model.Usuario;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -114,35 +113,19 @@ public class JwtService {
 	}
 	
 	
+	/**
+	 * Lê o login (subject) do token, conferindo assinatura e validade.
+	 *
+	 * @throws io.jsonwebtoken.ExpiredJwtException token vencido.
+	 * @throws io.jsonwebtoken.JwtException        token mal formado ou com
+	 *                                             assinatura que não confere.
+	 * @throws IllegalArgumentException            token vazio.
+	 */
 	public String extrairLogin(String token) {
 		return extrairClaims(token).getSubject();
 	}
-	
-	
-	
-	public boolean validarToken(String token) {
-		
-		try {
-		
-		if (token == null || token.isEmpty()) {
-			return false;
-		}
-		
-		Jwts.parser().verifyWith(getKey())
-		    .build()
-		    .parseSignedClaims(token);
-		
-		return true;
-		
-		}catch (Exception e) {
-			e.printStackTrace();
-			throw new MsgApiException("Token de acesso do usuário é inválido.");
-		}
-		
-	}
-	
-	
-	
+
+
 	private String getToken() {
 		return (String) SecurityContextHolder.getContext().getAuthentication().getCredentials();
 	}
