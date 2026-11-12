@@ -16,7 +16,7 @@ paths:
 - **403 do `@PreAuthorize`:** o `GlobalExceptionHandler` trata `AccessDeniedException` (403, mesma mensagem do `JwtAccessDeniedHandler`). Sem esse handler, a negação viraria 500.
 - **Dado que vem do request:** nunca concatene em JPQL ou SQL. O `sort` da paginação só passa por `JpaJdevRepositoryImpl.validarCampoOrdenacao()`.
 - **Erros:** sem permissão, `MsgApiException("...", HttpStatus.FORBIDDEN)`; falha de autenticação, `HttpStatus.UNAUTHORIZED`.
-- **Role nova:** se o código depender de uma role nova, ela entra por script novo em `db_sql_versionamento/`.
+- **Role nova:** se o código depender de uma role nova, ela entra por migração Flyway nova em `src/main/resources/db/migration/`.
 - **`SecurityConfig`:** não adicione `permitAll()` nem mude CORS, CSRF ou `SessionCreationPolicy` sem eu pedir.
 - **Senha:** use o bean `PasswordEncoder` de `SecurityConfig#passwordEncoder()` (BCrypt), com `encode(...)` para gravar e `matches(...)` para comparar. Nunca use `new BCryptPasswordEncoder()` fora do `SecurityConfig`.
 - **Token:** gere e leia só pelo `JwtService` (claims atuais: `usuarioId`, `empresaId`, `login`). Não coloque dados pessoais nem permissões no token.

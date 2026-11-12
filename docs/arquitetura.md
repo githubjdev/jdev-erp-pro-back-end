@@ -137,7 +137,7 @@ Observações:
 6. A resposta é `TokenDTO {token}`. O cliente envia `Authorization: Bearer <token>` nas próximas requisições.
 
 **Roles:**
-- **Onde ficam:** tabela `role`, campo `acesso`, entidade `model/Role implements GrantedAuthority`. O seed fica em `src/main/webapp/db_sql_versionamento/V1_INIT.sql`: `ROLE_USER` (id 1) e `ROLE_ADMIN` (id 2).
+- **Onde ficam:** tabela `role`, campo `acesso`, entidade `model/Role implements GrantedAuthority`. O seed fica na migração Flyway `src/main/resources/db/migration/V20261112_161000__carga_inicial.sql` (antigo `V1_INIT.sql`): `ROLE_USER` (id 1) e `ROLE_ADMIN` (id 2).
 - **Criação de roles:** via `/api/role` (`RoleService`). O nome precisa começar com `ROLE_` e é gravado em maiúsculas (`Role.setAcesso`).
 - **Atribuição a usuários:** tabela `role_usuario`, via `/api/roleUsuario` (`RoleUsuarioService`). Todo usuário novo recebe `ROLE_USER` em `UsuarioService.salvar()`.
 - **Como chegam ao Spring:** `Usuario.getAuthorities()` devolve `Usuario.acessos`.
@@ -164,7 +164,10 @@ Observações:
 | `application-prod.properties` | Perfil de produção. Hoje é uma cópia do dev (mesmo banco, porta, context-path e log). |
 
 - Não existe perfil `test`. Os testes (`TestContextoSpring`) carregam `application.properties` e, por padrão, rodam no perfil `dev`, contra o banco dev.
-- O schema é mantido pelo Hibernate (`ddl-auto=update`) nos dois perfis. Scripts SQL manuais ficam em `src/main/webapp/db_sql_versionamento/`.
+- **Schema:** versionado pelo Flyway desde 2026-11-12 (`docs/Flyway.md`).
+  - As migrações de `src/main/resources/db/migration/` rodam na subida, antes do Hibernate.
+  - O `ddl-auto=update` continua ligado nos dois perfis (P22).
+  - Os dois perfis têm a mesma configuração `spring.flyway.*`.
 - Beans ligados ao perfil: só `config/ConfiguracaoProducao`, com `@Profile("dev")`, que imprime uma mensagem no console.
 - Cache: `ConcurrentMapCacheManager("cacheJDevERPPRO")`, com `@EnableCaching` ligado, mas nenhum `@Cacheable` no código. `@EnableScheduling` e `@EnableAsync` também estão ligados sem nenhum `@Scheduled` ou `@Async`.
 - Os segredos (banco, JWT, `spring.security.user`) ficam em texto nos arquivos de perfil e não estão reproduzidos aqui.

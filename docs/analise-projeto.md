@@ -14,8 +14,11 @@ Este documento traz só o que não está em outro lugar:
   - O da máquina aponta para o JDK 17; o JDK 25 está em `C:\Program Files\Java\jdk-25.0.3`.
   - Para o Claude, o JDK 25 vem do `env` de `.claude/settings.local.json`, que só vale a partir da sessão seguinte.
 - **Lombok:** sem `-Dmaven.compiler.proc=full`, a compilação dá 200 erros `cannot find symbol`. A partir do JDK 23 o annotation processing implícito vem desligado, e o `pom.xml` não configura `annotationProcessorPaths`.
-- **Main de instância:** `mvn package` e `spring-boot:run` falham com `Unable to find main class`, porque a main é `void main(String[] args)`, uma main de instância.
-- **Como roda hoje:** a aplicação sobe pela IDE (P1).
+- **Main estática (desde 2026-11-12):**
+  - A main era `void main(String[] args)`, uma main de instância do Java 25. Com ela, `mvn package` e `spring-boot:run` falhavam com `Unable to find main class`.
+  - O `JarLauncher` do Spring Boot 4.0.6 também a chama por reflexão como método estático, então ela voltou a `public static void main`.
+  - Agora `mvn -Dmaven.compiler.proc=full -DskipTests package` gera o JAR, e ele roda com `java -jar` (`docs/Flyway.md` §11).
+- **Como roda hoje:** pela IDE (P1) ou por `java -jar`.
 
 ## 2. Dependências
 - **Starters:** `data-jpa`, `security`, `webmvc`, `validation`, mais os starters de teste correspondentes. Com eles vêm JUnit 5, Mockito, AssertJ e spring-security-test.
@@ -25,8 +28,9 @@ Este documento traz só o que não está em outro lugar:
   - `jjwt` 0.12.7;
   - `commons-collections4` 4.5.0;
   - `jackson-datatype-jsr310` **2.13.5 fixo**: é Jackson 2, enquanto o Boot 4 usa Jackson 3. O `ObjectMapperUtil` usa `com.fasterxml.jackson` (P8);
-  - `HikariCP` **4.0.3 fixo**, numa alteração ainda não commitada: sobrescreve a versão gerenciada pelo Boot e já viria pelo starter.
-- **Não usa:** MapStruct, Flyway, Liquibase, springdoc, Testcontainers, H2, devtools, spring-session.
+  - `HikariCP` **4.0.3 fixo**, numa alteração ainda não commitada: sobrescreve a versão gerenciada pelo Boot e já viria pelo starter;
+  - `spring-boot-starter-flyway` e `flyway-database-postgresql` (Flyway 11.14.1, versão do Boot), desde 2026-11-12. Ver `docs/Flyway.md`.
+- **Não usa:** MapStruct, Liquibase, springdoc, Testcontainers (não há Docker na máquina), H2, devtools, spring-session.
 - **Funções SQL no Hibernate:** `config/PostgreSQLFunctionContributor` registra `unaccent`, `similarity`, `word_similarity` e `strict_word_similarity`.
   - `unaccent` está ativa no banco dev.
   - Nenhuma query usa as funções de `pg_trgm`.
@@ -44,12 +48,18 @@ Ver `docs/arquitetura.md` §2 e §3: 6 módulos, 14 controllers e 202 endpoints.
   - `application-dev.properties` e `application-prod.properties` ainda não estão commitados e têm segredos em texto.
   - O prod é uma cópia do dev (P3).
   - Não existe perfil `test`.
-- **`ddl-auto=update` nos dois perfis.** O schema vem do Hibernate.
-  - Os scripts manuais ficam em `src/main/webapp/db_sql_versionamento/`, no padrão `V<n>_DESCRICAO.sql`. Hoje só existe `V1_INIT.sql` (P4).
-  - O `V1_INIT.sql` é um seed destrutivo:
+- **Flyway (desde 2026-11-12):** as migrações de `src/main/resources/db/migration/` rodam na subida, antes do Hibernate. Ver `docs/Flyway.md`.
+  - Os scripts antigos de `src/main/webapp/db_sql_versionamento/` viraram migrações:
+    - `V1_INIT.sql` → `V20261112_161000__carga_inicial.sql`;
+    - `V2_PESSOA_DOCUMENTO_POR_TIPO.sql` → `V20261112_162000__pessoa_documento_por_tipo.sql`.
+  - Entrou antes delas a `V20261112_160000__criacao_estrutura_inicial.sql`, a estrutura que antes só o Hibernate criava.
+  - A carga inicial continua sendo um seed destrutivo:
     - desliga triggers e apaga plano, empresa e pessoa;
     - recria o CHECK `plano_valor_mensal_check`;
     - insere 2 planos, a empresa 1, 30 categorias, `ROLE_USER` e `ROLE_ADMIN`.
+    - Agora tem uma trava: só roda com essas tabelas vazias, ou seja, num banco novo.
+  - Banco anterior ao Flyway recebe baseline automático, conferido por `config/VerificacaoBaselineFlyway`.
+- **`ddl-auto=update` nos dois perfis:** continua, e roda depois do Flyway (P22).
 - **Hikari e JPA:** pool de até 15 conexões, `auto-commit=false`, `open-in-view=false` (desde 2026-11-11; ver `docs/arquitetura.md`, Transações).
 - **Banco local:** PostgreSQL 18, serviço `postgresql-x64-18`, porta 5433. Também existe um serviço `postgresql-9.5` (P5).
 
@@ -70,9 +80,17 @@ Ver o `CLAUDE.md` (Convenções) e `.claude/rules/`.
   - `security/TestPermissoesAdmin`: os 50 endpoints da área de administração com um usuário comum (403), incluindo a exclusão em lote. Também a consulta da própria empresa, a troca de senha e a ordenação;
   - `service/TestSessaoHibernate`: services chamados direto, com sessão real e sem transação no teste. Confere que não há `LazyInitializationException` nos DTOs nem em `toString`/`equals`/`hashCode` das entidades fora da sessão;
   - `security/TestIsolamentoExclusaoEmLote` e `repository/TestJpaJdevRepositoryImpl`: a exclusão em lote, mesmo feita pelo admin, não toca em registro de outra empresa;
-  - `model/TestEntidadeBase`, `model/TestPessoa` e `security/TestJwtFilterUnitario`: unitários, sem banco.
-- **Resultado:** `mvn -Dmaven.compiler.proc=full test` roda 367 testes em cerca de 40 s, com `BUILD SUCCESS` (2026-11-11, banco dev com o `V2_PESSOA_DOCUMENTO_POR_TIPO.sql`). Num banco sem o V2, `TestPessoaController.testSalvarDocumentoPorTipo` falha.
-- **Banco:** os testes usam o banco dev real. Os de repository usam o seed (empresa 1) e fazem rollback; os de API gravam numa empresa de teste e apagam tudo no final. Não há `src/test/resources`.
+  - `model/TestEntidadeBase`, `model/TestPessoa` e `security/TestJwtFilterUnitario`: unitários, sem banco;
+  - Flyway (desde 2026-11-12), em bancos temporários `jdev_flyway_teste_*` criados e apagados por `contexto/BancoTemporarioTeste`:
+    - `config/TestMigracoesFlyway`: banco vazio, reexecução, migração nova, checksum, migração inválida, trava da carga inicial, nomes, e estrutura igual à do banco dev, que é só lido;
+    - `config/TestVerificacaoBaselineFlyway`: baseline em banco existente e as recusas;
+    - `app/TestJDevERPPROApplication`: a aplicação inteira subindo em banco vazio, existente e divergente, duas vezes, e com migração inválida.
+    - Detalhes em `docs/Flyway.md` §14.
+- **Resultado:** `mvn -Dmaven.compiler.proc=full test` roda 387 testes em cerca de 1 min 30 s, com `BUILD SUCCESS` (2026-11-12).
+- **Banco:**
+  - Os testes usam o banco dev real. Os de repository usam o seed (empresa 1) e fazem rollback; os de API gravam numa empresa de teste e apagam tudo no final.
+  - Os do Flyway usam bancos temporários.
+  - `src/test/resources/db/migracao-teste/` guarda migrações que só existem para os testes.
 
 ## 9. Comandos
 Ver `CLAUDE.md` (Comandos).
@@ -91,7 +109,8 @@ Ver `CLAUDE.md` (Comandos).
 - **Erro no `JwtFilter`:** resolvido em 2026-11-11 (P7). Token recusado responde 401 com o motivo; erro inesperado, 500 pelo `GlobalExceptionHandler` (`arquitetura.md` §4).
 
 **Banco e configuração**
-- **`ddl-auto=update` em prod:** sem ferramenta de migration.
+- **`ddl-auto=update` nos dois perfis:** desde 2026-11-12, o Flyway versiona a estrutura, mas o `update` continua e pode criar coluna ou tabela fora das migrações. Trocar por `validate` é a P22.
+- **`-pro` sem Flyway:** o banco `jdev-erp-pro-prod` não tem o V2 e tem as uniques `unique_sku` e `unique_inscricao_estadual`, que o dev não tem (P23).
 - **Prod igual ao dev:** o `application-prod.properties` é cópia do dev.
 - **Propriedades obsoletas ou sem efeito:**
   - `spring.http.encoding.*`, `spring.resources.*`, `server.tomcat.max-threads`;

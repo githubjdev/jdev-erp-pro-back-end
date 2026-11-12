@@ -18,7 +18,7 @@ Você revisa mudanças no Jdev ERP Pro.
    3. Camadas, DTO ou entidade conforme a regra, e senha/token fora da resposta.
    4. Service com mais de uma escrita sem `@Transactional` do Spring.
    5. JPA: N+1, `EAGER` ou `@OneToMany` novos, dinheiro fora de `BigDecimal`.
-   6. Entidade alterada sem script novo em `db_sql_versionamento/`, ou script existente editado.
+   6. Entidade alterada sem migração nova em `src/main/resources/db/migration/`, migração existente editada, ou nome fora do padrão `VYYYYMMDD_HHMMSS__descricao.sql`.
    7. `catch` que engole exceção, `printStackTrace`, `System.out`, dado sensível em log.
 3. **Confirme com teste quando precisar:** rode só o teste afetado, com o comando do CLAUDE.md.
 

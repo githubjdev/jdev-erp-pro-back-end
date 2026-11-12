@@ -1,6 +1,6 @@
 # Regras de negócio — Jdev ERP Pro
 
-Levantadas do código de `jdev-erp-pro-back-end-dev/` (services, entidades e `V1_INIT.sql`) em 2026-10-28. O documento descreve só o que o código faz hoje, sem regras inventadas. Pontos com intenção incerta citam a pendência correspondente (Pn) de `docs/pendencias.md`.
+Levantadas do código de `jdev-erp-pro-back-end-dev/` (services, entidades e `V20261112_161000__carga_inicial.sql` (antigo `V1_INIT.sql`)) em 2026-10-28. O documento descreve só o que o código faz hoje, sem regras inventadas. Pontos com intenção incerta citam a pendência correspondente (Pn) de `docs/pendencias.md`.
 Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.pro.service` e `br.com.jdeverp.pro.model`.
 
 ## 0. Regras gerais (todos os módulos com empresa)
@@ -80,11 +80,11 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 **Plano (global)** — todo o endpoint é só de `ROLE_ADMIN` (403): `@PreAuthorize` em `PlanoController`; `PlanoService.salvar()`, `atualizar()` e `deleteById()` também conferem.
 32. O nome do plano é único em todo o sistema — `PlanoService.salvar()`, `PlanoService.atualizar()`.
 33. Nome, descrição, valor mensal, limites e tipo são obrigatórios — `Plano` (`@NotBlank`/`@NotNull`).
-34. O valor mensal segue o CHECK do banco: o plano `FREE` vale 0; os demais, de R$ 49 a R$ 200 — `PlanoService.validarValorMensal()` e CHECK `plano_valor_mensal_check` em `V1_INIT.sql`.
+34. O valor mensal segue o CHECK do banco: o plano `FREE` vale 0; os demais, de R$ 49 a R$ 200 — `PlanoService.validarValorMensal()` e CHECK `plano_valor_mensal_check` em `V20261112_161000__carga_inicial.sql` (antigo `V1_INIT.sql`).
 35. O plano `FREE` é inserido direto no banco: pela API não se cadastra outro nem se transforma outro plano em FREE ("Já existe o plano FREE: ele é cadastrado direto no banco e não pode haver outro.") — `PlanoService.salvar()`, `atualizar()` (P11).
 36. O limite de usuários e o limite de clientes vão de 1 a 150 — `Plano.limiteUsuario`, `Plano.limiteCliente`.
 37. Tipos de plano: `FREE`, `PRO`, `ENTERPRISE` — `TipoPlano`.
-38. Planos do seed — `V1_INIT.sql`:
+38. Planos do seed — `V20261112_161000__carga_inicial.sql` (antigo `V1_INIT.sql`):
     - "Plano Free": FREE, R$ 0, 4 usuários, 2 clientes;
     - "Plano Pro": PRO, R$ 50, 30 usuários, 15 clientes.
 
@@ -133,7 +133,7 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 
 **Categoria**
 60. O nome da categoria é obrigatório e único dentro da empresa — `Categoria.nome`, `CategoriaService.salvar()`, `CategoriaService.atualizar()`.
-61. A categoria do seed pertence à empresa 1 (30 categorias padrão) — `V1_INIT.sql`.
+61. A categoria do seed pertence à empresa 1 (30 categorias padrão) — `V20261112_161000__carga_inicial.sql` (antigo `V1_INIT.sql`).
 
 **Produto**
 62. O nome do produto é único dentro da empresa:
@@ -215,7 +215,7 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 
 **Validação alinhada às restrições do banco** — corrigida em 2026-11-11 (P11, P13, P15, P20):
 - Plano FREE: a API recusava o valor 0 que o CHECK exige. Agora segue o CHECK, e a API não cadastra outro FREE (regras 34 e 35).
-- `Pessoa`: o CNPJ e o e-mail não tinham `@NotBlank`, e a falta só aparecia como erro do banco. Agora o e-mail é obrigatório para todos, o CPF só para pessoa física e o CNPJ só para jurídica, no back-end e no banco (script `V2_PESSOA_DOCUMENTO_POR_TIPO.sql`). A data de cadastro é preenchida pelo back-end (regras 47 a 49a).
+- `Pessoa`: o CNPJ e o e-mail não tinham `@NotBlank`, e a falta só aparecia como erro do banco. Agora o e-mail é obrigatório para todos, o CPF só para pessoa física e o CNPJ só para jurídica, no back-end e no banco (migração `V20261112_162000__pessoa_documento_por_tipo.sql`, antigo `V2_PESSOA_DOCUMENTO_POR_TIPO.sql`). A data de cadastro é preenchida pelo back-end (regras 47 a 49a).
 - `Produto`: as mensagens diziam "maior que 1" para um mínimo de 1, e faltava `@NotNull` (regra 66).
 - `Mensagem.arquivo` era `NOT NULL` sem validação na entidade (regra 92).
 

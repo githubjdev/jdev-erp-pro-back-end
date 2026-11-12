@@ -1,6 +1,6 @@
 # Pendências — decisões em aberto
 
-Esta é a lista única de dúvidas do projeto. Os outros documentos citam cada item pelo número (P1 a P21).
+Esta é a lista única de dúvidas do projeto. Os outros documentos citam cada item pelo número (P1 a P24).
 Quando uma pendência for respondida, registre a decisão aqui, atualize os arquivos afetados e marque o item como resolvido.
 
 O relatório da sessão de 2026-11-11 (DTOs, open-in-view, testes, JwtFilter, área admin e regras alinhadas ao banco) está em `docs/relatorios/relatorio-sessao-2026-11-11.pdf`.
@@ -9,12 +9,20 @@ O relatório da sessão de 2026-11-11 (DTOs, open-in-view, testes, JwtFilter, á
 | # | Pergunta | Afeta |
 |---|---|---|
 | P1 | A IDE usada é o Eclipse? | `analise-projeto.md` §1 |
-| P2 | Qual é o papel do módulo `-pro` (deploy, produção, cópia)? O trabalho continua só no `-dev`? Em 2026-11-12, a pedido, o `-pro` recebeu todas as mudanças do `-dev`; hoje diferem só o `.project`, o `pom.xml` (groupId, artifactId e nome) e, nos properties, o banco, o context-path e o log. | `CLAUDE.md` (Repositório) |
+| P2 | Qual é o papel do módulo `-pro` (deploy, produção, cópia)? O trabalho continua só no `-dev`? Em 2026-11-12, a pedido, o `-pro` recebeu todas as mudanças do `-dev`; hoje diferem só o `.project`, o `pom.xml` (groupId, artifactId e nome) e, nos properties, o banco, o context-path e o log. Desde 2026-11-12, o `-dev` também tem Flyway e o `-pro` não (P23). | `CLAUDE.md` (Repositório) |
 | P3 | Que nome de banco, context-path e arquivo de log o perfil `prod` deve ter? No `-dev`, ele é cópia do dev. No `-pro`, os dois perfis (inclusive o `dev`) apontam para o banco `jdev-erp-pro-prod`. | `application-prod.properties` |
-| P4 | Como e quando o `V1_INIT.sql` é executado (pgAdmin, psql, só na criação do banco)? | skills `nova-migration`, `novo-crud` |
 | P5 | O serviço `postgresql-9.5` serve a outro sistema ou pode ser ignorado? | `CLAUDE.md` (Comandos) |
 | P6 | O usuário de `spring.security.user.*` é usado em algum lugar? | `analise-projeto.md` §6 |
 | P8 | Há motivo para manter o `jackson-datatype-jsr310` 2.13.5 fixo no `pom.xml`? | `analise-projeto.md` §2 |
+
+## Flyway (implantado em 2026-11-12 no `-dev`)
+Detalhes em `docs/Flyway.md`.
+
+| # | Pergunta | Afeta |
+|---|---|---|
+| P22 | Trocar `spring.jpa.hibernate.ddl-auto=update` por `validate` nos dois perfis? O Flyway cria toda a estrutura e o teste `TestJDevERPPROApplication.testMainBancoVazio` mostra que o `update` não muda nada depois dele. Mas o `update` ainda pode criar coluna ou tabela fora das migrações quando uma entidade muda. Não mudado: a regra do `CLAUDE.md` pede decisão. | `application-*.properties`, `CLAUDE.md` |
+| P23 | Levar o Flyway para o `-pro`? O banco `jdev-erp-pro-prod` está sem o V2 (P13), então a primeira subida precisa de `SPRING_FLYWAY_BASELINE_VERSION=20261112.161000`, e o Flyway aplica o V2. Com o baseline padrão, uma cópia do prod foi recusada, como esperado. O prod também tem duas uniques que o dev não tem, sobras de versões antigas das entidades: `unique_sku` (SKU único no banco inteiro, contra o `unique_sku_empresa` por empresa) e `unique_inscricao_estadual` (duplicata de `unique_incricao_estadual`). Elas saem por migração? | `-pro`, `docs/Flyway.md` §8 |
+| P24 | A carga inicial cria o admin `alex.fernando.egidio@gmail.com` com a senha de teste escrita no próprio script. Num banco novo de produção, essa senha precisa ser trocada logo depois da primeira subida. Manter assim, ou mudar a carga para um admin sem senha conhecida (com uma migração nova)? | `V20261112_161000__carga_inicial.sql` |
 
 ## Decididas em 2026-11-11, a implementar
 Decisão tomada; falta implementar. As perguntas que sobraram estão em **A confirmar**.
@@ -133,7 +141,13 @@ Para o `Chamado`, todos os status da proposta existem. O `StatusChamado` tem mai
 
 ## Resolvidas
 - **Token gravado no usuário:** confirmado. `existsByTokenParaUser` confere `usuario.token_sessao`.
-- **`mvn package` / `spring-boot:run`:** falham com "Unable to find main class".
+- **`mvn package` / `spring-boot:run` (2026-11-12):** falhavam com "Unable to find main class" por causa da main de instância (`void main`).
+  - A main passou a `public static void main`, porque o `JarLauncher` do Spring Boot 4.0.6 também só chama main estática.
+  - O JAR é gerado e roda com `java -jar`.
+- **P4 — execução do `V1_INIT.sql` (2026-11-12):** resolvida pela adoção do Flyway.
+  - O script virou a migração `V20261112_161000__carga_inicial.sql` e roda sozinho, só em banco novo.
+  - Uma trava recusa a execução se `plano`, `empresa` ou `pessoa` tiverem dados.
+  - Banco existente recebe baseline e não a executa (`docs/Flyway.md`).
 - **PostgreSQL local:** é o serviço `postgresql-x64-18`, na porta 5433.
 - **Testes:** os 9 passam com o JDK 25 e `-Dmaven.compiler.proc=full`.
 - **Extensão `unaccent`:** está ativa no banco dev. O `pg_trgm` ainda não é usado.
@@ -164,6 +178,7 @@ Para o `Chamado`, todos os status da proposta existem. O `StatusChamado` tem mai
   - Substitui a primeira decisão do dia (CPF, CNPJ e e-mail obrigatórios para todos).
   - Banco: `V2_PESSOA_DOCUMENTO_POR_TIPO.sql` tira o `NOT NULL` de `cpf` e `cnpj` e cria `pessoa_cpf_pessoa_fisica_check`, `pessoa_cnpj_pessoa_juridica_check` e `pessoa_email_preenchido_check`. O script não altera dados e para sem mudar nada se algum cadastro estiver fora da regra.
   - **Aplicado em:** dev em 2026-11-11 (sem erro; os 3 cadastros já cumpriam a regra). Prod pendente: o `-pro` já tem o código novo (2026-11-12), então o V2 precisa ir para o banco `jdev-erp-pro-prod` antes de subir o `-pro`. Sem ele, cadastrar pessoa física sem CNPJ ou jurídica sem CPF esbarra no `NOT NULL` do banco.
+  - **Desde 2026-11-12** é a migração Flyway `V20261112_162000__pessoa_documento_por_tipo.sql`. Se o `-pro` adotar o Flyway (P23), o prod recebe baseline em `20261112.161000` e o Flyway aplica o V2 sozinho.
   - Back-end: `Pessoa.isCpfInformadoParaPessoaFisica()` e `isCnpjInformadoParaPessoaJuridica()` (`@AssertTrue`); `setCpf`/`setCnpj` gravam em branco como `NULL`, para não bater na unique. `@NotNull` em `ativo` continua.
   - Testes: `model/TestPessoa` e `TestPessoaController`.
 - **P15 — Preço e estoque (2026-11-11):** decidido seguir os CHECK do banco: preço, estoque e estoque mínimo obrigatórios e no mínimo 1.
