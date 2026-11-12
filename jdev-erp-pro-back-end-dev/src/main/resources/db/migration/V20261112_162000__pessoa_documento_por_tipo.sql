@@ -1,3 +1,11 @@
+-- [Flyway] Migrado em 2026-11-12 de src/main/webapp/db_sql_versionamento/V2_PESSOA_DOCUMENTO_POR_TIPO.sql.
+-- [Flyway] Adaptações (só o necessário; nenhum comando SQL foi removido além destes):
+-- [Flyway]   * saíram o BEGIN; e o COMMIT; do arquivo: o Flyway já executa cada migração numa transação
+-- [Flyway]     e grava o histórico nela. Um COMMIT dentro do script encerraria essa transação no meio.
+-- [Flyway]   * a linha "Aplicar com: psql ..." abaixo vale só para o arquivo antigo. Agora quem aplica é o
+-- [Flyway]     Flyway, na subida da aplicação.
+-- [Flyway] Banco que já tinha o V2 aplicado à mão recebe baseline nesta versão e não a executa de novo.
+
 -- Objetivo: e-mail obrigatório para toda pessoa, CPF obrigatório só para pessoa física e CNPJ só para pessoa jurídica (P13).
 --
 -- Antes: cpf, cnpj e email eram NOT NULL para os dois tipos de pessoa.
@@ -12,7 +20,7 @@
 -- Idempotente: pode rodar de novo sem erro.
 -- Aplicar com: psql -v ON_ERROR_STOP=1 -h <host> -p <porta> -U <usuario> -d <banco> -f V2_PESSOA_DOCUMENTO_POR_TIPO.sql
 
-BEGIN;
+-- [Flyway] BEGIN; removido (ver o cabeçalho).
 
 DO $$
 DECLARE
@@ -64,4 +72,4 @@ BEGIN
     END IF;
 END $$;
 
-COMMIT;
+-- [Flyway] COMMIT; removido (ver o cabeçalho).

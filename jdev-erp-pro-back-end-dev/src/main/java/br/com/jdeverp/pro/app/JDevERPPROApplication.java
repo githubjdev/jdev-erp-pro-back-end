@@ -37,7 +37,7 @@ public class JDevERPPROApplication {
 	@Autowired
 	private PasswordEncoder passwordEncoder;
 
-	void main(String[] args) {
+	public static void main(String[] args) {
 		SpringApplication app = new SpringApplication(JDevERPPROApplication.class);
 		app.run(args);
 

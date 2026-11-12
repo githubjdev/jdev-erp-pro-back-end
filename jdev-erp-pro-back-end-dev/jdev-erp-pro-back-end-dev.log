@@ -5,3 +5,28 @@
 2026-10-28 18:42:16.002 [main] INFO  b.c.j.p.contexto.TestContextoSpring - Started TestContextoSpring in 9.035 seconds (process running for 10.444)
 2026-10-28 18:42:16.878 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool - Shutdown initiated...
 2026-10-28 18:42:16.881 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool - Shutdown completed.
+2026-11-12 17:12:40.912 [main] INFO  b.c.j.pro.app.JDevERPPROApplication - Starting JDevERPPROApplication using Java 25.0.3 with PID 26692 (C:\Users\alex_\git\jdev-erp-pro-back-end\jdev-erp-pro-back-end-dev\target\classes started by alex_ in C:\Users\alex_\git\jdev-erp-pro-back-end\jdev-erp-pro-back-end-dev)
+2026-11-12 17:12:40.916 [main] INFO  b.c.j.pro.app.JDevERPPROApplication - The following 1 profile is active: "dev"
+2026-11-12 17:12:43.212 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-11-12 17:12:43.212 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/11.0.21]
+2026-11-12 17:12:43.787 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool - Starting...
+2026-11-12 17:12:44.049 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool - Start completed.
+2026-11-12 17:12:44.079 [main] INFO  org.flywaydb.core.FlywayExecutor - Database: jdbc:postgresql://localhost:5433/jdev-erp-pro-dev?reWriteBatchedInserts=true&autoreconnect=true (PostgreSQL 18.1)
+2026-11-12 17:12:44.150 [main] INFO  o.f.core.internal.command.DbValidate - Successfully validated 4 migrations (execution time 00:00.036s)
+2026-11-12 17:12:44.311 [main] INFO  o.f.core.internal.command.DbMigrate - Current version of schema "public": 20261112.162000
+2026-11-12 17:12:44.314 [main] INFO  o.f.core.internal.command.DbMigrate - Schema "public" is up to date. No migration necessary.
+2026-11-12 17:12:49.263 [main] INFO  b.c.j.pro.app.JDevERPPROApplication - Started JDevERPPROApplication in 8.883 seconds (process running for 9.298)
+2026-11-12 17:13:54.901 [main] INFO  b.c.j.pro.app.JDevERPPROApplication - Starting JDevERPPROApplication using Java 25.0.3 with PID 26608 (C:\Users\alex_\git\jdev-erp-pro-back-end\jdev-erp-pro-back-end-dev\target\classes started by alex_ in C:\Users\alex_\git\jdev-erp-pro-back-end\jdev-erp-pro-back-end-dev)
+2026-11-12 17:13:54.906 [main] INFO  b.c.j.pro.app.JDevERPPROApplication - The following 1 profile is active: "dev"
+2026-11-12 17:13:57.012 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-11-12 17:13:57.012 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/11.0.21]
+2026-11-12 17:13:57.541 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool - Starting...
+2026-11-12 17:13:57.901 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool - Start completed.
+2026-11-12 17:13:57.932 [main] INFO  org.flywaydb.core.FlywayExecutor - Database: jdbc:postgresql://localhost:5433/jdev-erp-pro-dev?reWriteBatchedInserts=true&autoreconnect=true (PostgreSQL 18.1)
+2026-11-12 17:13:57.999 [main] INFO  o.f.core.internal.command.DbValidate - Successfully validated 4 migrations (execution time 00:00.035s)
+2026-11-12 17:13:58.166 [main] INFO  o.f.core.internal.command.DbMigrate - Current version of schema "public": 20261112.162000
+2026-11-12 17:13:58.172 [main] INFO  o.f.core.internal.command.DbMigrate - Schema "public" is up to date. No migration necessary.
+2026-11-12 17:14:02.929 [main] INFO  b.c.j.pro.app.JDevERPPROApplication - Started JDevERPPROApplication in 8.614 seconds (process running for 9.085)
+2026-11-12 17:14:59.058 [http-nio-8081-exec-4] INFO  o.a.c.c.C.[.[.[/jdev-erp-pro-back-end-dev] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-11-12 17:14:59.058 [http-nio-8081-exec-4] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-11-12 17:14:59.061 [http-nio-8081-exec-4] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 3 ms

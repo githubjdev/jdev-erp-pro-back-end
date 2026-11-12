@@ -1,3 +1,20 @@
+-- [Flyway] Migrado em 2026-11-12 de src/main/webapp/db_sql_versionamento/V1_INIT.sql.
+-- [Flyway] Carga inicial: planos, a empresa 1 com a pessoa e o usuário admin, 30 categorias, ROLE_USER e
+-- [Flyway] ROLE_ADMIN, mais os ajustes de estrutura que o V1 já fazia (CHECK do plano, unaccent, colunas do
+-- [Flyway] usuário). Roda logo depois de V20261112_160000__criacao_estrutura_inicial, só em banco novo.
+-- [Flyway] Adaptação: entrou só a trava abaixo; nenhum comando do V1 foi alterado ou removido.
+-- [Flyway]   O V1 apaga plano, empresa e pessoa com as FKs desligadas. Antes era rodado à mão; agora roda
+-- [Flyway]   sozinho, então a trava recusa a execução se essas tabelas já tiverem dados.
+-- [Flyway] Requer superusuário (ou GRANT SET ON PARAMETER session_replication_role) por causa do SET abaixo.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM public.plano)
+       OR EXISTS (SELECT 1 FROM public.empresa)
+       OR EXISTS (SELECT 1 FROM public.pessoa) THEN
+        RAISE EXCEPTION 'Carga inicial recusada: plano, empresa ou pessoa já têm dados. Ela apaga essas tabelas e só roda em banco novo. Banco existente recebe baseline (ver docs/Flyway.md).';
+    END IF;
+END $$;
+
 --Desabilita restrições, trigger e contrains
 SET session_replication_role = replica;
 
