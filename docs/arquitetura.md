@@ -83,11 +83,21 @@ Observações:
 1. **Tomcat** (porta 8081, context-path `/jdev-erp-pro-back-end-dev`) → cadeia do Spring Security definida em `security/SecurityConfig#securityFilterChain`.
 2. **CORS** (`SecurityConfig#corsConfigurationSource`) → **`security/JwtFilter`** (`OncePerRequestFilter`, registrado antes de `UsernamePasswordAuthenticationFilter`):
    1. Sem `Authorization: Bearer ...`, a requisição segue anônima. Só `POST /api/usuario/login` aceita requisição anônima.
-   2. `JwtService.validarToken(token)` confere a assinatura HMAC (chave de `jwt.secret`) e a expiração. Token inválido lança `MsgApiException`.
-   3. `JwtService.extrairLogin(token)` lê o `subject` (login).
-   4. `UsuarioDetailsService.existsByTokenParaUser(token)` extrai `usuarioId` e `empresaId` dos claims e chama `UsuarioRepository.existsByTokenParaUser`. Essa query nativa exige `usuario.token_sessao = token`.
-   5. `UsuarioDetailsService.loadUserByUsername(login)` chama `UsuarioRepository.buscaPorLogin` e recusa usuário não liberado ou empresa bloqueada.
-   6. `new UsuarioAutenticado(usuario)` → `UsernamePasswordAuthenticationToken(principal, token, authorities)` → `SecurityContextHolder`.
+   2. `JwtService.extrairLogin(token)` confere a assinatura HMAC (chave de `jwt.secret`) e a expiração, e lê o `subject` (login).
+   3. `UsuarioDetailsService.existsByTokenParaUser(token)` extrai `usuarioId` e `empresaId` dos claims e chama `UsuarioRepository.existsByTokenParaUser`. Essa query nativa exige `usuario.token_sessao = token`.
+   4. `UsuarioDetailsService.loadUserByUsername(login)` chama `UsuarioRepository.buscaPorLogin` e recusa usuário não liberado ou empresa bloqueada.
+   5. `new UsuarioAutenticado(usuario)` → `UsernamePasswordAuthenticationToken(principal, token, authorities)` → `SecurityContextHolder`.
+   6. **Token recusado** nos passos 2 a 4: a requisição segue sem autenticação e o motivo fica no atributo `JwtFilter.ATRIBUTO_MOTIVO_RECUSA`. Numa rota protegida, o `JwtAuthenticationEntryPoint` responde 401 com esse motivo na `message`; o login continua aberto mesmo com um token velho no header. O log registra só o motivo e a rota, nunca o token.
+
+      | Caso | `message` do 401 |
+      |---|---|
+      | sem token | "Usuário não autenticado ou token inválido" |
+      | mal formado ou assinatura que não confere | "Token de acesso inválido." |
+      | vencido | "Token de acesso expirado, faça login novamente." |
+      | não é o token gravado (novo login) | "Sessão encerrada ou substituída por um novo login, faça login novamente." |
+      | usuário ou empresa bloqueados depois do login | as mesmas mensagens do login |
+
+   7. **Erro que não é de autenticação** (ex.: banco fora do ar): o filtro entrega a exceção ao `GlobalExceptionHandler` pelo `HandlerExceptionResolver` e a resposta é 500 em `ResponseApi`.
 3. **Autorização** (`authorizeHttpRequests`):
    - `/api/usuario/login` é público;
    - `/api/admin/**` exige `ROLE_ADMIN` (nenhum controller usa esse prefixo);
@@ -102,8 +112,9 @@ Observações:
 8. **Resposta:**
    - sucesso: `ResponseEntity.ok(...)`, serializado pelo Jackson;
    - exceção dentro do MVC: `exception/GlobalExceptionHandler` → `ResponseApi` `{localDateTime, status, error, message, path}`;
-   - exceção lançada no `JwtFilter`: fica fora do `GlobalExceptionHandler`.
-- Transações: os services não usam `@Transactional`. Cada chamada de repository roda na sua própria transação, e `spring.jpa.open-in-view=true`.
+   - token recusado: 401 do `JwtAuthenticationEntryPoint`; erro inesperado no `JwtFilter`: 500 pelo `GlobalExceptionHandler` (passos 2.6 e 2.7).
+- Transações: `spring.jpa.open-in-view=false`. Cada service tem `@Transactional(readOnly = true)` na classe e `@Transactional` nos métodos de escrita; a sessão do Hibernate só existe dentro do método do service, que já devolve DTO ao controller. O usuário do `JwtFilter` é carregado fora dessa sessão (relacionamentos LAZY não podem ser lidos nele).
+- Enum no JSON: sempre pelo nome (`CARTAO_CREDITO`), não pelo `toString()`, por causa do `config/ConfiguracaoJackson` (o padrão do Jackson 3 seria o `toString()`).
 - Na subida da aplicação:
   - `validator/RepositoryEmpresaValidator` (`SmartInitializingSingleton`) recusa repositories com métodos sem `@Query` ou sem filtro de empresa (exceção: `@IgnoreEmpresaId`);
   - `JDevERPPROApplication.configTimeZone()` fixa `America/Sao_Paulo` e `pt_BR`.

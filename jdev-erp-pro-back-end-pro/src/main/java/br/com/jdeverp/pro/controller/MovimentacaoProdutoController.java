@@ -8,6 +8,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,11 +18,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.jdeverp.pro.dto.MovimentacaoProdutoDTO;
 import br.com.jdeverp.pro.model.MovimentacaoProduto;
 import br.com.jdeverp.pro.service.MovimentacaoProdutoService;
 import br.com.jdeverp.pro.service.UsuarioLogadoService;
 import jakarta.validation.Valid;
 
+@PreAuthorize("isAuthenticated()")
 @RestController
 @RequestMapping("/api/movimentacaoProduto")
 public class MovimentacaoProdutoController {
@@ -33,23 +36,23 @@ public class MovimentacaoProdutoController {
         private UsuarioLogadoService usuarioLogadoService;
 
         @PostMapping("/salvar")
-        public ResponseEntity<MovimentacaoProduto> salvar(@RequestBody @Valid MovimentacaoProduto movimentacaoProduto) {
+        public ResponseEntity<MovimentacaoProdutoDTO> salvar(@RequestBody @Valid MovimentacaoProduto movimentacaoProduto) {
                 return ResponseEntity.ok(movimentacaoProdutoService.salvar(movimentacaoProduto));
         }
 
         @PostMapping("/atualizar")
-        public ResponseEntity<MovimentacaoProduto> atualizar(@RequestBody @Valid MovimentacaoProduto movimentacaoProduto) {
+        public ResponseEntity<MovimentacaoProdutoDTO> atualizar(@RequestBody @Valid MovimentacaoProduto movimentacaoProduto) {
                 return ResponseEntity.ok(movimentacaoProdutoService.atualizar(movimentacaoProduto));
         }
 
         @GetMapping("/listar")
-        public ResponseEntity<List<MovimentacaoProduto>> findAll() {
+        public ResponseEntity<List<MovimentacaoProdutoDTO>> findAll() {
                 return ResponseEntity.ok(movimentacaoProdutoService.findAll(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/buscaPorNome/{nome}")
-        public ResponseEntity<List<MovimentacaoProduto>> buscaPorNome(@PathVariable String nome) {
+        public ResponseEntity<List<MovimentacaoProdutoDTO>> buscaPorNome(@PathVariable String nome) {
                 return ResponseEntity.ok(movimentacaoProdutoService.buscaPorNome(nome,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
@@ -68,13 +71,13 @@ public class MovimentacaoProdutoController {
         }
 
         @GetMapping("/listarTodos")
-        public ResponseEntity<List<MovimentacaoProduto>> listar() {
+        public ResponseEntity<List<MovimentacaoProdutoDTO>> listar() {
                 return ResponseEntity.ok(movimentacaoProdutoService.listar(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/buscarPorId/{id}")
-        public ResponseEntity<MovimentacaoProduto> buscarPorId(@PathVariable Long id) {
+        public ResponseEntity<MovimentacaoProdutoDTO> buscarPorId(@PathVariable Long id) {
                 return movimentacaoProdutoService.buscarPorId(id, usuarioLogadoService.getEmpresaIdLogada())
                                 .map(ResponseEntity::ok)
                                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -87,7 +90,7 @@ public class MovimentacaoProdutoController {
         }
 
         @PostMapping("/buscarPorIds")
-        public ResponseEntity<List<MovimentacaoProduto>> buscarPorIds(@RequestBody Iterable<Long> ids) {
+        public ResponseEntity<List<MovimentacaoProdutoDTO>> buscarPorIds(@RequestBody Iterable<Long> ids) {
                 return ResponseEntity.ok(movimentacaoProdutoService.buscarPorIds(ids,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
@@ -99,7 +102,7 @@ public class MovimentacaoProdutoController {
         }
 
         @GetMapping("/paginado")
-        public ResponseEntity<Page<MovimentacaoProduto>> listarPaginado(
+        public ResponseEntity<Page<MovimentacaoProdutoDTO>> listarPaginado(
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
                         @RequestParam(defaultValue = "id") String sort,
@@ -117,12 +120,14 @@ public class MovimentacaoProdutoController {
                 return ResponseEntity.ok("Movimentação de produto deletada com sucesso.");
         }
 
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         @DeleteMapping("/deletarTodos")
         public ResponseEntity<Long> deleteAll() {
                 return ResponseEntity.ok(movimentacaoProdutoService.deleteAll(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         @DeleteMapping("/deletarTodosPorIds")
         public ResponseEntity<Void> deletarAllById(@RequestBody Iterable<Long> ids) {
                 movimentacaoProdutoService.deletarAllById(ids,
@@ -131,13 +136,13 @@ public class MovimentacaoProdutoController {
         }
 
         @GetMapping("/listarPorPedido/{idPedido}")
-        public ResponseEntity<List<MovimentacaoProduto>> findAllByPedido(@PathVariable Long idPedido) {
+        public ResponseEntity<List<MovimentacaoProdutoDTO>> findAllByPedido(@PathVariable Long idPedido) {
                 return ResponseEntity.ok(movimentacaoProdutoService.findAllByPedido(idPedido,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/buscaPorNomePorPedido/{idPedido}/{nome}")
-        public ResponseEntity<List<MovimentacaoProduto>> buscaPorNomeByPedido(
+        public ResponseEntity<List<MovimentacaoProdutoDTO>> buscaPorNomeByPedido(
                         @PathVariable Long idPedido, @PathVariable String nome) {
                 return ResponseEntity.ok(movimentacaoProdutoService.buscaPorNomeByPedido(nome, idPedido,
                                 usuarioLogadoService.getEmpresaIdLogada()));

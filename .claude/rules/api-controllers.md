@@ -17,7 +17,6 @@ paths:
 - **Paginação:** `page=0`, `size=10`, `sort=id`, `direction=asc` → `PageRequest.of(...)` → `service.listarPaginado(empresaId, pageable)`, como em `CategoriaController.listarPaginado()`.
   - O `sort` é concatenado no JPQL: aceite só campos conhecidos da entidade.
 - **Entidade ou DTO:**
-  - CRUD simples usa a própria entidade.
-  - Use DTO para campo sensível ou derivado (`UsuarioDto`, `LoginDTO`, `TokenDTO`, `AlterarSenhaDTO`).
-  - Use DTO também para `Empresa` e `ClienteFuncionario`: no JSON elas saem só como id (`@JsonIdentityReference(alwaysAsId = true)`).
-- **DTO:** classe `dto/EntidadeDTO` (`UsuarioDto` é exceção antiga), com Lombok `@Getter @Setter`. Relacionamentos viram `xxxId` + `xxxNome`. A conversão é manual, no service.
+  - Entrada: a própria entidade (`@RequestBody @Valid X`), para aproveitar a Bean Validation dela. DTO de entrada só para campo sensível ou derivado (`UsuarioDto`, `LoginDTO`, `AlterarSenhaDTO`).
+  - Saída: sempre DTO, nunca a entidade, inclusive em `List<XDTO>`, `Page<XDTO>` e `Optional<XDTO>`.
+- **DTO:** classe `dto/EntidadeDTO` (`UsuarioDto` é exceção antiga), com Lombok `@Getter @Setter`. Relacionamentos viram `xxxId` + `xxxNome` (para `Usuario`, o nome vem de `DtoUtil.nomeUsuario`). Enum fica com o tipo do enum. A conversão é manual, no service.

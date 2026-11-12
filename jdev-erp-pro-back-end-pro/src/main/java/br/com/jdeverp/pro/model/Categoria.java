@@ -14,22 +14,28 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "categoria")
 @SequenceGenerator(name = "seq_categoria", sequenceName = "seq_categoria", allocationSize = 1, initialValue = 1)
-public class Categoria {
+public class Categoria extends EntidadeBase {
 	
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_categoria")
+	@ToString.Include
 	private Long id;
 
 	@NotBlank(message = "Nome deve ser informado")
 	@NotEmpty(message = "Nome não pode ser nulo")
 	@Column(nullable = false)
+	@ToString.Include
 	private String nome;
 	
 	

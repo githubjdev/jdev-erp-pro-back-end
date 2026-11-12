@@ -19,23 +19,29 @@ import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "produto", uniqueConstraints = {
 		@UniqueConstraint(name="unique_sku_empresa", columnNames = {"sku", "empresa_id"}),
 		@UniqueConstraint(name="unique_nome_produto_empresa", columnNames = {"nome", "empresa_id"}),
 })
 @SequenceGenerator(name = "seq_produto", sequenceName = "seq_produto", allocationSize = 1, initialValue = 1)
-public class Produto {
+public class Produto extends EntidadeBase {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_produto")
+	@ToString.Include
 	private Long id;
 	
 	@NotBlank(message = "Nome deve ser informado")
 	@Column(nullable = false)
+	@ToString.Include
 	private String nome;
 	
 	private String descricao;
@@ -44,20 +50,28 @@ public class Produto {
 	@Column(nullable = false, columnDefinition = "text")
 	private String imagem;
 	
-	@Min(value = 1, message = "Preço deve ser maior que R$ 1.00 reais")
+	/*Preço, estoque e estoque mínimo: no mínimo 1, como os CHECK do banco (P15)*/
+	@NotNull(message = "Preço deve ser informado")
+	@Min(value = 1, message = "Preço deve ser de no mínimo R$ 1,00")
 	@Column(nullable = false)
+	@ToString.Include
 	private Double preco;
-	
-	@Min(value = 1, message = "Estoque deve ser maior que 1")
+
+	@NotNull(message = "Estoque deve ser informado")
+	@Min(value = 1, message = "Estoque deve ser de no mínimo 1")
 	@Column(nullable = false)
+	@ToString.Include
 	private Double estoque;
-	
-	@Min(value = 1, message = "Estoque Minimo deve ser maior que 1")
+
+	@NotNull(message = "Estoque mínimo deve ser informado")
+	@Min(value = 1, message = "Estoque mínimo deve ser de no mínimo 1")
 	@Column(nullable = false)
+	@ToString.Include
 	private Double estoqueMinimo;
 	
 	@NotBlank(message = "Código SKU deve ser informado")
 	@Column(nullable = false)
+	@ToString.Include
 	private String sku;
 
 	private String codigoBarra; /*Varios tipo de parafuso*/
@@ -65,6 +79,7 @@ public class Produto {
 	@NotNull(message = "Unidade de medida de ser informado")
 	@Enumerated(EnumType.STRING)
 	@Column(name = "unidade_medida", nullable = false)
+	@ToString.Include
 	private UnidadeMedida unidadeMedida;
 	
 	@NotNull(message = "Categoria deve ser informada.")

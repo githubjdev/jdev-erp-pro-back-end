@@ -7,6 +7,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +26,8 @@ import br.com.jdeverp.pro.service.UsuarioService;
 import jakarta.validation.Valid;
 
 /*Cada controller tem um contexto, recebe dados do front-end, api, integração e etc*/
+/*Consultas: qualquer usuário logado (dados da empresa dele). Cadastro, edição e exclusão de usuários: só ROLE_ADMIN*/
+@PreAuthorize("isAuthenticated()")
 @RestController
 @RequestMapping("/api/usuario")
 public class UsuarioController {
@@ -36,6 +39,7 @@ public class UsuarioController {
 	private UsuarioLogadoService usuarioLogadoService;
 	
 	
+	@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 	@PostMapping("/salvar")
 	public ResponseEntity<UsuarioDto> salvar(@RequestBody @Valid UsuarioDto usuarioDto){
 		
@@ -44,6 +48,7 @@ public class UsuarioController {
 		return ResponseEntity.ok(usuarioSalvo);
 	}
 	
+	@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 	@PostMapping("/atualizar")
 	public ResponseEntity<UsuarioDto> atualizar(@RequestBody @Valid UsuarioDto usuarioDto){
 		
@@ -54,6 +59,8 @@ public class UsuarioController {
 	
 	
 	/*Ponto de acesso (end-point): /api/usuario/login */
+	/*Única rota pública (SecurityConfig): sobrepõe o isAuthenticated() da classe*/
+	@PreAuthorize("permitAll()")
 	@PostMapping("/login")
 	public ResponseEntity<TokenDTO> login(@RequestBody  @Valid LoginDTO login){
 		
@@ -85,6 +92,7 @@ public class UsuarioController {
 	}
 	
 	
+	@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 	@DeleteMapping("/deletar/{id}")
 	public ResponseEntity<String> deletePorId(@PathVariable(required = true, value = "id") Long idUser){
 		
@@ -121,7 +129,7 @@ public class UsuarioController {
 	@GetMapping("/buscar-por-login/{login}")
 	public ResponseEntity<UsuarioDto> buscarPorLogin(@PathVariable(required = true, value = "login") String login){
 		
-		UsuarioDto dto = usuarioService.buscaPorLoginDto(login);
+		UsuarioDto dto = usuarioService.buscaPorLoginDto(login, usuarioLogadoService.getEmpresaIdLogada());
 		
 		if (dto == null) {
 			return ResponseEntity.notFound().build();
@@ -173,6 +181,7 @@ public class UsuarioController {
 	}
 	
 	
+	@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 	@DeleteMapping("/deletar-todos")
 	public ResponseEntity<String> deletarTodosUsuarios(){
 		

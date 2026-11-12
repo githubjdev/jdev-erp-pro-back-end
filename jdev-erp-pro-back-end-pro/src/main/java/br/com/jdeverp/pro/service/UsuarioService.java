@@ -12,6 +12,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import br.com.jdeverp.pro.dto.AlterarSenhaDTO;
 import br.com.jdeverp.pro.dto.LoginDTO;
@@ -30,6 +31,7 @@ import jakarta.persistence.PersistenceContext;
  * Dentro do service vc pode criar infinitos métodos, gerar grafico, api de pagamento, gerar relatorio e etc*/
 
 @Service
+@Transactional(readOnly = true)
 public class UsuarioService {
 
 	@Autowired /* Injeção de dependência */
@@ -38,202 +40,216 @@ public class UsuarioService {
 	/*Posso escrever query customizadas e dinâmicas, mais complexas do que no Repository*/
 	@PersistenceContext
 	private EntityManager entityManager;
-	
+
 	@Autowired
 	private PasswordEncoder passwordEncoder;
-	
+
 	@Autowired
 	private AuthenticationManager authenticationManager;
-	
+
 	@Autowired
 	private JwtService jwtService;
-	
+
 	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
-	
+
 	@Autowired
 	private ClienteFuncionarioService clienteFuncionarioService;
-	
+
 	@Autowired
 	private RoleService roleService;
-	
+
 	@Autowired
 	private RoleUsuarioService roleUsuarioService;
-	
+
 	/**
 	 * Retorna o token de acesso para o usuário que fez o login
 	 * @param dto
 	 * @return TokenDTO
 	 */
+	@Transactional
 	public TokenDTO login(LoginDTO dto) {
-		
+
 		Usuario usuario = buscaPorLogin(dto.getLogin());
-		
+
 		if(usuario == null) {
 			throw new MsgApiException("Usuário não encontrado.", HttpStatus.UNAUTHORIZED);
 		}
-		
+
 		if(!usuario.isEnabled()) {
 			throw new MsgApiException("Usuário bloqueado, entre em contato com o administrador do sistema.", HttpStatus.UNAUTHORIZED);
 		}
-		
+
 		if(usuario.getEmpresa().getBloqueio()) {
 			throw new MsgApiException("Empresa bloqueada, entre em contato com o administrador do sistema.", HttpStatus.UNAUTHORIZED);
 		}
-		
-		
+
+
 		boolean senhaValida = passwordEncoder.matches(dto.getSenha(), usuario.getSenha());
-		
+
 		if(!senhaValida) {
 			throw new MsgApiException("Senha digitada é inválida.", HttpStatus.UNAUTHORIZED);
 		}
-		
+
 		authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(dto.getLogin(), dto.getSenha()));
-		
+
 		String token = jwtService.gerarToken(usuario);
-		
+
 		usuarioRepository.updateTokenSessaoLogin(usuario.getId(), token, usuario.getEmpresa().getId());
-		
+
 		return new TokenDTO(token);
-		
+
 	}
-	
-	
-	public UsuarioDto salvar(UsuarioDto usuarioDto) {
-		
+
+
+	/*Cadastro, edição e exclusão de usuários são área de administração*/
+	private void exigirAdmin(String operacao) {
 		if (!usuarioLogadoService.isAdmin()) {
-			throw new MsgApiException("Apenas administradores podem cadastrar novos usuários.");
+			throw new MsgApiException("Apenas administradores podem " + operacao + ".", HttpStatus.FORBIDDEN);
 		}
-		
-		
-		if(usuarioRepository.existePorLogin(usuarioDto.getLogin(), usuarioLogadoService.getEmpresaIdLogada())) { 
+	}
+
+
+	@Transactional
+	public UsuarioDto salvar(UsuarioDto usuarioDto) {
+
+		exigirAdmin("cadastrar novos usuários");
+
+
+		if(usuarioRepository.existePorLogin(usuarioDto.getLogin(), usuarioLogadoService.getEmpresaIdLogada())) {
 			throw new MsgApiException("O login escolhido já existe, escolha outro login para cadastrar um novo usuário.");
 		}
-		
-		
-		if(usuarioDto.getSenha().length() < 5) {
+
+
+		if(usuarioDto.getSenha() == null || usuarioDto.getSenha().length() < 5) {
 			throw new MsgApiException("A senha deve ter mais de 5 caracteres.");
 		}
-		
+
 		if (usuarioRepository.existePorPessoa(usuarioDto.getPessoaId(), usuarioLogadoService.getEmpresaIdLogada())) {
 			 throw new MsgApiException("Já existe um usuário vinculado a esta pessoa.");
 		}
-		
+
 		ClienteFuncionario clienteFuncionario =  clienteFuncionarioService.findByPessoa(usuarioDto.getPessoaId(), usuarioLogadoService.getEmpresaIdLogada());
-		
+
 		if (clienteFuncionario == null) {
 			throw new MsgApiException("Não foi informado o registro de pessoa/ cliente ou funcioário para o usuário.");
 		}
-		
-		
+
+
 		List<Role>  roles = roleService.buscaPorAcesso("ROLE_USER");
-		
+
 		Usuario usuario = new Usuario();
-		
+
 		usuario.setLogin(usuarioDto.getLogin());
 		usuario.setSenha(passwordEncoder.encode(usuarioDto.getSenha()));
 		usuario.setLiberado(usuarioDto.getLiberado());
 		usuario.setClienteFuncionario(clienteFuncionario);
 		usuario.setEmpresa(usuarioLogadoService.getEmpresaLogada());
 		usuario = usuarioRepository.saveAndFlush(usuario);
-		
+
 		for (Role role : roles) {
 			RoleUsuario roleUsuario = new RoleUsuario();
 			roleUsuario.setAcesso(role);
 			roleUsuario.setUsuario(usuario);
-			
+
 			roleUsuarioService.salvar(roleUsuario);
 		}
-		
+
 		clienteFuncionario.setUsuario(usuario);
 		clienteFuncionarioService.salvarClienteFunUser(clienteFuncionario);
-		
+
 		usuarioDto.setSenha("***Ocultada***");/*Não pode expor a senha na rede*/
 		usuarioDto.setId(usuario.getId());
 		usuarioDto.setClienteFuncionarioId(clienteFuncionario.getId());
 		usuarioDto.setEmpresa(clienteFuncionario.getEmpresa().getPessoa().getNome());
 		usuarioDto.setPessoa(clienteFuncionario.getPessoa().getNome());
-		usuarioDto.setTipoClienteFuncionario(clienteFuncionario.getTipoClienteFuncionario().name());
+		usuarioDto.setTipoClienteFuncionario(clienteFuncionario.getTipoClienteFuncionario());
 		return usuarioDto;
 	}
-	
+
+	@Transactional
 	public UsuarioDto atualizar(UsuarioDto usuarioDto) {
-		
-		if (!usuarioLogadoService.isAdmin()) {
-			throw new MsgApiException("Apenas administradores podem cadastrar novos usuários.");
+
+		exigirAdmin("atualizar usuários");
+
+		if (usuarioDto.getId() == null) {
+			throw new MsgApiException("Id do usuário deve ser informado para atualizar.");
 		}
-		
-		
+
+		Usuario usuarioBanco = buscarPorId(usuarioDto.getId(), usuarioLogadoService.getEmpresaIdLogada())
+				.orElseThrow(() -> new MsgApiException("Usuário não encontrado para a empresa logada."));
+
 		if (usuarioRepository.existeOutroUsuarioComPessoa(usuarioDto.getPessoaId(), usuarioDto.getId(), usuarioLogadoService.getEmpresaIdLogada())) {
 			throw new MsgApiException("Existe outro usuário associado a pessoa que foi selecionada.");
 		}
-		
-		
+
+
 		ClienteFuncionario clienteFuncionario =  clienteFuncionarioService.findByPessoa(usuarioDto.getPessoaId(), usuarioLogadoService.getEmpresaIdLogada());
-		
+
 		if (clienteFuncionario == null) {
 			throw new MsgApiException("Não foi informado o registro de pessoa/ cliente ou funcioário para o usuário.");
 		}
-		
-		Usuario usuarioBanco = buscarPorId(usuarioDto.getId(), usuarioLogadoService.getEmpresaIdLogada()).get();
-		
+
 		usuarioBanco.setClienteFuncionario(clienteFuncionario);
 		usuarioBanco.setEmpresa(usuarioLogadoService.getEmpresaLogada());
 		usuarioBanco.setLogin(usuarioDto.getLogin());
 		usuarioBanco.setLiberado(usuarioDto.getLiberado());
-		
+
 		usuarioBanco = usuarioRepository.saveAndFlush(usuarioBanco);
-		
+
 		usuarioDto.setSenha("***Ocultada***");/*Não pode expor a senha na rede*/
 		usuarioDto.setId(usuarioBanco.getId());
 		usuarioDto.setClienteFuncionarioId(clienteFuncionario.getId());
 		usuarioDto.setEmpresa(clienteFuncionario.getEmpresa().getPessoa().getNome());
 		usuarioDto.setPessoa(clienteFuncionario.getPessoa().getNome());
-		usuarioDto.setTipoClienteFuncionario(clienteFuncionario.getTipoClienteFuncionario().name());
-		
+		usuarioDto.setTipoClienteFuncionario(clienteFuncionario.getTipoClienteFuncionario());
+
 		return usuarioDto;
 	}
-	
-	
+
+
+	@Transactional
 	public void alterarSenha(AlterarSenhaDTO dto) {
-		
-		Usuario usuario = usuarioRepository.buscarPorId(dto.getId(), usuarioLogadoService.getEmpresaIdLogada()).get();
-		
-	  if (usuario == null) {
-		  throw new MsgApiException("Usuário não encontrado.");
-	  }	
-	  
+
+		/*O id vem do request: o usuário comum só troca a própria senha*/
+		if (!usuarioLogadoService.isAdmin() && !usuarioLogadoService.getUsuarioLogadoId().equals(dto.getId())) {
+			throw new MsgApiException("Você só pode alterar a sua própria senha.", HttpStatus.FORBIDDEN);
+		}
+
+		Usuario usuario = usuarioRepository.buscarPorId(dto.getId(), usuarioLogadoService.getEmpresaIdLogada())
+				.orElseThrow(() -> new MsgApiException("Usuário não encontrado."));
+
 	  if(!usuario.isEnabled()) {
 			throw new MsgApiException("Usuário bloqueado, entre em contato com o administrador do sistema.", HttpStatus.UNAUTHORIZED);
 		}
-		
+
 		if(usuario.getEmpresa().getBloqueio()) {
 			throw new MsgApiException("Empresa bloqueada, entre em contato com o administrador do sistema.", HttpStatus.UNAUTHORIZED);
 		}
-	  
+
 	  if (!dto.getNovaSenha().equals(dto.getConfirmarSenha())) {
 		  throw new MsgApiException("A confirmação da senha não confere.");
 	  }
-	  
+
 	  /*COnferencia se a nova senha igual a do banco e emite msg*/
 	  if (passwordEncoder.matches(dto.getNovaSenha(), usuario.getSenha())) {
 		  throw new MsgApiException("A nova senha deve ser diferente da atual");
 	  }
-	  
+
 	  /*Conferencia se senha atual é mesma do banco e autoriza a troca de senha*/
 	  if (!passwordEncoder.matches(dto.getSenhaAtual(), usuario.getSenha())) {
 		  throw new MsgApiException("Senha atual inválida");
 	  }
-	  
+
 	  usuario.setSenha(passwordEncoder.encode(dto.getNovaSenha()));
-	  
+
 	  usuarioRepository.saveAndFlush(usuario);
-		
+
 	}
-	
+
 
 	public List<Usuario> findAll(Long idEmpresa) {
-		
+
 		return usuarioRepository.findAll(idEmpresa);
 	}
 
@@ -253,7 +269,10 @@ public class UsuarioService {
 		return usuarioRepository.existePorNomeDiferenteId(id, nome, idEmpresa);
 	}
 
+	@Transactional
 	public void deleteById(Long id, Long idEmpresa) {
+		exigirAdmin("deletar usuários");
+
 		if (!usuarioRepository.existsById(id, idEmpresa)) {
 			throw new MsgApiException("Usuário não encontrado ou já foi deletado.");
 		}
@@ -262,7 +281,10 @@ public class UsuarioService {
 		usuarioRepository.deleteById(id, idEmpresa);
 	}
 
+	@Transactional
 	public long deleteAll(Long empresaID) {
+		exigirAdmin("deletar usuários");
+
 		if (usuarioRepository.total(empresaID) == 0) {
 			throw new MsgApiException("Nenhum usuário encontrado para deletar ou todos já foram deletados.");
 		}
@@ -270,7 +292,10 @@ public class UsuarioService {
 		return usuarioRepository.deleteAll(empresaID);
 	}
 
+	@Transactional
 	void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		exigirAdmin("deletar usuários");
+
 		List<Long> encontrados = usuarioRepository.buscarPorIds(ids, empresaId).stream().map(Usuario::getId).toList();
 		List<Long> naoEncontrados = new ArrayList<>();
 		ids.forEach(id -> {
@@ -299,49 +324,20 @@ public class UsuarioService {
 	}
 
 	public List<UsuarioDto> listar(Long empresaId) {
-		
-		List<Usuario> usuarios = usuarioRepository.listar(empresaId); 
-		List<UsuarioDto> dtos = new java.util.ArrayList<UsuarioDto>();
-		
-		for (Usuario usuario : usuarios) {
-			
-			UsuarioDto dto = new UsuarioDto();
-			
-			dto.setId(usuario.getId());
-			dto.setPessoa(usuario.getClienteFuncionario().getPessoa().getNome());
-			dto.setLiberado(usuario.isEnabled());
-			dto.setEmpresa(usuario.getEmpresa().getPessoa().getNome());
-			dto.setTipoClienteFuncionario(usuario.getClienteFuncionario().getTipoClienteFuncionario().name());
-			dto.setPessoaId(usuario.getClienteFuncionario().getPessoa().getId());
-			dto.setClienteFuncionarioId(usuario.getClienteFuncionario().getId());
-			
-			dtos.add(dto);
-		}
-		
-		return dtos;
+		return converterListaParaDto(usuarioRepository.listar(empresaId));
 	}
 
 	public Optional<Usuario> buscarPorId(Long id, Long empresaId) {
 		return usuarioRepository.buscarPorId(id, empresaId);
 	}
-	
-	
+
+
 	public UsuarioDto buscarPorIdDto(Long id, Long empresaId) {
-		
-		Optional<Usuario>  usuario = usuarioRepository.buscarPorId(id, empresaId);
-		
-		if (!usuario.isPresent()) {
-			throw new MsgApiException("Usuário não foi encontrado na busca.");
-		}
-		
-		UsuarioDto dto = new UsuarioDto();
-		dto.setId(usuario.get().getId());
-		dto.setPessoa(usuario.get().getClienteFuncionario().getPessoa().getNome());
-		dto.setLiberado(usuario.get().isEnabled());
-		dto.setEmpresa(usuario.get().getEmpresa().getPessoa().getNome());
-		dto.setTipoClienteFuncionario(usuario.get().getClienteFuncionario().getTipoClienteFuncionario().name());
-		
-		return dto;
+
+		Usuario usuario = usuarioRepository.buscarPorId(id, empresaId)
+				.orElseThrow(() -> new MsgApiException("Usuário não foi encontrado na busca."));
+
+		return converterParaDto(usuario);
 	}
 
 	public long total(Long empresaId) {
@@ -351,45 +347,36 @@ public class UsuarioService {
 	public Page<Usuario> listarPaginado(Long empresaId, Pageable pageable) {
 		return usuarioRepository.listarPaginado(empresaId, pageable);
 	}
-	
-	
+
+
 	public List<UsuarioDto> listarPaginadoDto(Long empresaId, Pageable pageable) {
-		
-		Page<Usuario> usuarios =  usuarioRepository.listarPaginado(empresaId, pageable);
-		List<UsuarioDto> dtos = new java.util.ArrayList<UsuarioDto>();
-		
-		for (Usuario usuario : usuarios) {
-			
-			UsuarioDto dto = new UsuarioDto();
-			
-			dto.setId(usuario.getId());
-			dto.setPessoa(usuario.getClienteFuncionario().getPessoa().getNome());
-			dto.setLiberado(usuario.isEnabled());
-			dto.setEmpresa(usuario.getEmpresa().getPessoa().getNome());
-			dto.setTipoClienteFuncionario(usuario.getClienteFuncionario().getTipoClienteFuncionario().name());
-			
-			dtos.add(dto);
-		}
-		
-		return dtos;		
-				
+		return converterListaParaDto(usuarioRepository.listarPaginado(empresaId, pageable).getContent());
 	}
 
 	/**
-	 * Método auxiliar para converter Usuario em UsuarioDto
+	 * Método auxiliar para converter Usuario em UsuarioDto.
+	 * Leva o login e o pessoaId para o retorno servir de base para o atualizar.
+	 * Nunca copia a senha.
 	 * @param usuario
 	 * @return UsuarioDto
 	 */
 	private UsuarioDto converterParaDto(Usuario usuario) {
 		UsuarioDto dto = new UsuarioDto();
 		dto.setId(usuario.getId());
-		dto.setPessoa(usuario.getClienteFuncionario().getPessoa().getNome());
+		dto.setLogin(usuario.getLogin());
 		dto.setLiberado(usuario.isEnabled());
 		dto.setEmpresa(usuario.getEmpresa().getPessoa().getNome());
-		dto.setTipoClienteFuncionario(usuario.getClienteFuncionario().getTipoClienteFuncionario().name());
+		dto.setClienteFuncionarioId(usuario.getClienteFuncionario().getId());
+		dto.setTipoClienteFuncionario(usuario.getClienteFuncionario().getTipoClienteFuncionario());
+		dto.setPessoaId(usuario.getClienteFuncionario().getPessoa().getId());
+		dto.setPessoa(usuario.getClienteFuncionario().getPessoa().getNome());
 		return dto;
 	}
-	
+
+	private List<UsuarioDto> converterListaParaDto(List<Usuario> usuarios) {
+		return usuarios.stream().map(this::converterParaDto).toList();
+	}
+
 	/**
 	 * Busca usuários por nome e retorna como DTO
 	 * @param nome
@@ -397,31 +384,26 @@ public class UsuarioService {
 	 * @return List<UsuarioDto>
 	 */
 	public List<UsuarioDto> buscaPorNomeDto(String nome, Long empresaId) {
-		List<Usuario> usuarios = usuarioRepository.buscaPorNome(nome, empresaId);
-		List<UsuarioDto> dtos = new java.util.ArrayList<>();
-		
-		for (Usuario usuario : usuarios) {
-			dtos.add(converterParaDto(usuario));
-		}
-		
-		return dtos;
+		return converterListaParaDto(usuarioRepository.buscaPorNome(nome, empresaId));
 	}
-	
+
 	/**
 	 * Busca usuário por login e retorna como DTO
 	 * @param login
-	 * @return UsuarioDto
+	 * @param empresaId
+	 * @return UsuarioDto, ou null se o login não existir na empresa logada
 	 */
-	public UsuarioDto buscaPorLoginDto(String login) {
+	public UsuarioDto buscaPorLoginDto(String login, Long empresaId) {
 		Usuario usuario = usuarioRepository.buscaPorLogin(login);
-		
-		if (usuario == null) {
+
+		/*buscaPorLogin não filtra a empresa (é a consulta do login): aqui só devolve usuário da empresa logada*/
+		if (usuario == null || !usuario.getEmpresa().getId().equals(empresaId)) {
 			return null;
 		}
-		
+
 		return converterParaDto(usuario);
 	}
-	
+
 	/**
 	 * Busca usuários por lista de IDs e retorna como DTO
 	 * @param ids
@@ -429,14 +411,7 @@ public class UsuarioService {
 	 * @return List<UsuarioDto>
 	 */
 	public List<UsuarioDto> buscarPorIdsDto(Iterable<Long> ids, Long empresaId) {
-		List<Usuario> usuarios = usuarioRepository.buscarPorIds(ids, empresaId);
-		List<UsuarioDto> dtos = new java.util.ArrayList<>();
-		
-		for (Usuario usuario : usuarios) {
-			dtos.add(converterParaDto(usuario));
-		}
-		
-		return dtos;
+		return converterListaParaDto(usuarioRepository.buscarPorIds(ids, empresaId));
 	}
 
 	// ====================dentro dos métodos do

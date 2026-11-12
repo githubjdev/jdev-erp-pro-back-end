@@ -17,7 +17,10 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class JwtAccessDeniedHandler implements AccessDeniedHandler {
-	
+
+	/*Mesma mensagem do 403 do @PreAuthorize (GlobalExceptionHandler)*/
+	public static final String MSG_SEM_PERMISSAO = "Você não possui permissão para acessar este recurso ou url";
+
 	@Autowired
 	private ObjectMapperUtil objectMapperUtil;
 
@@ -33,7 +36,7 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 		ResponseApi responseApi = new ResponseApi(new Date(), 
 													403, 
 													"Forbidden", 
-													"Você não possui permissão para acessar este recurso ou url",
+													MSG_SEM_PERMISSAO,
 													request.getRequestURI());
 		
 		response.getWriter().write(objectMapperUtil.objetoParaJson(responseApi));

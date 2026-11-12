@@ -22,14 +22,18 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 @JsonIdentityInfo(
 	    generator = ObjectIdGenerators.PropertyGenerator.class,
 	    property = "id"
 )
 @JsonIdentityReference(alwaysAsId = true)
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "cliente_funcionario", uniqueConstraints = {
 		@UniqueConstraint(name = "unique_pessoa_usuario", columnNames = {"usuario_id","pessoa_id"}),
@@ -37,15 +41,17 @@ import lombok.Data;
 		@UniqueConstraint(name = "unique_pessoa", columnNames = {"pessoa_id"})
 })
 @SequenceGenerator(name = "seq_cliente_funcionario", sequenceName = "seq_cliente_funcionario", allocationSize = 1, initialValue = 1)
-public class ClienteFuncionario {
+public class ClienteFuncionario extends EntidadeBase {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_cliente_funcionario")
+	@ToString.Include
 	private Long id;
 	
 	@NotNull(message = "Informe o tipo de relação com a pessoa")
 	@Column(nullable = false, name = "tipo_cliente_funcionario")
 	@Enumerated(EnumType.STRING)
+	@ToString.Include
 	private TipoClienteFuncionario tipoClienteFuncionario;
 	
 	

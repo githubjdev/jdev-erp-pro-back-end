@@ -18,10 +18,13 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.support.JpaEntityInformation;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.data.repository.query.FluentQuery.FetchableFluentQuery;
+import org.springframework.transaction.annotation.Transactional;
 
+import br.com.jdeverp.pro.exception.MsgApiException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
+import jakarta.persistence.metamodel.Attribute.PersistentAttributeType;
 
 public class JpaJdevRepositoryImpl<T, ID extends Serializable> extends SimpleJpaRepository<T, ID>
 		implements JpaJdevRepository<T, ID> {
@@ -118,7 +121,7 @@ public class JpaJdevRepositoryImpl<T, ID extends Serializable> extends SimpleJpa
 			List<String> orders = new ArrayList<String>();
 
 			for (Sort.Order order : pageable.getSort()) {
-				orders.add(order.getProperty() + " " + order.getDirection().name());
+				orders.add(validarCampoOrdenacao(order.getProperty()) + " " + order.getDirection().name());
 			}
 
 			jpql += String.join(",", orders);
@@ -135,6 +138,25 @@ public class JpaJdevRepositoryImpl<T, ID extends Serializable> extends SimpleJpa
 				             .getResultList();
 
 		return new PageImpl<T>(lista, pageable, total(empresaId));
+	}
+
+	/**
+	 * O campo de ordenação vem do request e é concatenado no JPQL. Só passa o nome
+	 * exato de um atributo simples da entidade (coluna própria, sem relacionamento).
+	 * Qualquer outra coisa poderia injetar uma subconsulta no {@code order by} e
+	 * ler dados de outras empresas, inclusive o token de sessão de um administrador.
+	 */
+	private String validarCampoOrdenacao(String campo) {
+		boolean campoDaEntidade = entityManager.getMetamodel().entity(domainClass).getSingularAttributes().stream()
+				.anyMatch(atributo -> atributo.getPersistentAttributeType() == PersistentAttributeType.BASIC
+						&& atributo.getName().equals(campo));
+
+		if (!campoDaEntidade) {
+			/*Sem repetir o valor recebido: ele iria para a resposta e para o log*/
+			throw new MsgApiException("Campo de ordenação inválido.");
+		}
+
+		return campo;
 	}
 
 	/*Total de registros cadastrados de acordo com a empresa e a tabela/classe/entidade/model atual*/
@@ -157,11 +179,36 @@ public class JpaJdevRepositoryImpl<T, ID extends Serializable> extends SimpleJpa
 		return query.getSingleResult();
 	}
 
+	/**
+	 * Pelo metamodelo do JPA, que enxerga também atributos herdados. O
+	 * {@code getDeclaredField} anterior só via o campo declarado na própria classe:
+	 * se a {@code empresa} viesse de uma superclasse, o filtro por empresa sumiria
+	 * em silêncio de todas as consultas e exclusões genéricas.
+	 */
 	private boolean possuiEmpresa() {
-		try {
-			return domainClass.getDeclaredField("empresa") != null;
-		} catch (NoSuchFieldException e) {
-			return false;
+		return entityManager.getMetamodel().entity(domainClass).getAttributes().stream()
+				.anyMatch(atributo -> atributo.getName().equals("empresa"));
+	}
+
+	/**
+	 * A exclusão em lote só roda filtrada pela empresa, inclusive para o
+	 * administrador: o {@code empresaId} vem sempre da empresa logada.
+	 * <ul>
+	 * <li>Entidade global (sem empresa, ex.: {@code Plano}, {@code Role},
+	 * {@code Empresa}, {@code RoleUsuario}): o {@code delete} não teria filtro e
+	 * apagaria os registros de todas as empresas, então é recusado.</li>
+	 * <li>Empresa nula: recusada, para não depender de como o banco trata
+	 * {@code empresa_id = null}.</li>
+	 * </ul>
+	 */
+	private void validarExclusaoEmLote(Long empresaId) {
+		if (!multiEmpresa) {
+			throw new UnsupportedOperationException("Exclusão em lote não permitida em " + domainClass.getSimpleName()
+					+ ": a entidade não tem empresa e o delete apagaria os registros de todas as empresas.");
+		}
+
+		if (empresaId == null) {
+			throw new IllegalArgumentException("Empresa não informada para a exclusão em lote de " + domainClass.getSimpleName() + ".");
 		}
 	}
 
@@ -248,39 +295,35 @@ public class JpaJdevRepositoryImpl<T, ID extends Serializable> extends SimpleJpa
 	}
 
 	@Override
+	@Transactional
 	public void deletarAllById(Iterable<ID> ids, Long empresaId) {
-		
-		String jpql = "delete from " + domainClass.getSimpleName() + " where id in :ids";
-		
-		if (multiEmpresa) {
-			jpql += " and empresa.id = :empresaId";
-		}
+		validarExclusaoEmLote(empresaId);
 
-		Query query = entityManager.createQuery(jpql);
+		Query query = entityManager.createQuery("delete from " + domainClass.getSimpleName()
+				+ " where id in :ids and empresa.id = :empresaId");
 		query.setParameter("ids", ids);
+		query.setParameter("empresaId", empresaId);
 
-		if (multiEmpresa) {
-			query.setParameter("empresaId", empresaId);
-		}
-
-		 query.executeUpdate();
+		executarExclusaoEmLote(query);
 	}
 
 	@Override
+	@Transactional
 	public long deleteAll(Long empresaID) {
+		validarExclusaoEmLote(empresaID);
 
-		String jpql = "delete from " + domainClass.getSimpleName();
-		if (multiEmpresa) {
-			jpql += " where empresa.id = :empresaId";
-		}
+		Query query = entityManager.createQuery("delete from " + domainClass.getSimpleName() + " where empresa.id = :empresaId");
+		query.setParameter("empresaId", empresaID);
 
-		Query query = entityManager.createQuery(jpql);
+		return executarExclusaoEmLote(query);
+	}
 
-		if (multiEmpresa) {
-			query.setParameter("empresaId", empresaID);
-		}
-
-		return query.executeUpdate();
+	/*Como o @Modifying(flushAutomatically = true, clearAutomatically = true) dos deletes customizados*/
+	private int executarExclusaoEmLote(Query query) {
+		entityManager.flush();
+		int excluidos = query.executeUpdate();
+		entityManager.clear();
+		return excluidos;
 	}
 	
 	
@@ -437,6 +480,45 @@ public class JpaJdevRepositoryImpl<T, ID extends Serializable> extends SimpleJpa
 	public void deleteAllInBatch() {
 		validar("deleteAllInBatch");
 		super.deleteAllInBatch();
+	}
+
+	/*Exclusões em lote do Spring Data sem empresa: o delete sai sem filtro. Use deletarAllById(ids, empresaId)*/
+	@Override
+	public void deleteAllInBatch(Iterable<T> entities) {
+		validar("deleteAllInBatch");
+		super.deleteAllInBatch(entities);
+	}
+
+	@Override
+	public void deleteAllByIdInBatch(Iterable<ID> ids) {
+		validar("deleteAllByIdInBatch");
+		super.deleteAllByIdInBatch(ids);
+	}
+
+	@Override
+	public void deleteAllById(Iterable<? extends ID> ids) {
+		validar("deleteAllById");
+		super.deleteAllById(ids);
+	}
+
+	@Override
+	public void deleteAll(Iterable<? extends T> entities) {
+		validar("deleteAll");
+		super.deleteAll(entities);
+	}
+
+	@Override
+	@Deprecated
+	public T getOne(ID id) {
+		validar("getOne");
+		return super.getOne(id);
+	}
+
+	@Override
+	@Deprecated
+	public T getById(ID id) {
+		validar("getById");
+		return super.getById(id);
 	}
 	
 	@Override

@@ -7,7 +7,14 @@ paths:
 ---
 # Segurança
 
+- **Área de administração (P9 e P10):** a permissão fica nos dois lugares.
+  - **Controller:** `@PreAuthorize("hasAuthority('ROLE_ADMIN')")` na classe ou no método. Os demais controllers levam `@PreAuthorize("isAuthenticated()")` na classe; o `login` sobrepõe com `permitAll()`.
+  - **Service:** um `exigirAdmin(...)` privado, que lança `MsgApiException("Apenas administradores podem ...", HttpStatus.FORBIDDEN)`. Vale também quando outro service chama o método.
+  - **O que é área admin:** `Plano`, `Role`, `RoleUsuario`, `Empresa` (exceto o `buscarPorId` da própria empresa), cadastro, edição ou exclusão de usuários e exclusão em lote (`deletarTodos`, `deletarTodosPorIds`, P21).
+  - **Teste:** endpoint admin novo entra na lista de `security/TestPermissoesAdmin`.
 - **Não remova checagens existentes:** ao adicionar `@PreAuthorize`, mantenha as checagens `usuarioLogadoService.isAdmin()` que os services já fazem.
+- **403 do `@PreAuthorize`:** o `GlobalExceptionHandler` trata `AccessDeniedException` (403, mesma mensagem do `JwtAccessDeniedHandler`). Sem esse handler, a negação viraria 500.
+- **Dado que vem do request:** nunca concatene em JPQL ou SQL. O `sort` da paginação só passa por `JpaJdevRepositoryImpl.validarCampoOrdenacao()`.
 - **Erros:** sem permissão, `MsgApiException("...", HttpStatus.FORBIDDEN)`; falha de autenticação, `HttpStatus.UNAUTHORIZED`.
 - **Role nova:** se o código depender de uma role nova, ela entra por script novo em `db_sql_versionamento/`.
 - **`SecurityConfig`:** não adicione `permitAll()` nem mude CORS, CSRF ou `SessionCreationPolicy` sem eu pedir.

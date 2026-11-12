@@ -6,10 +6,13 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import br.com.jdeverp.pro.dto.MovimentacaoProdutoDTO;
 import br.com.jdeverp.pro.exception.MsgApiException;
 import br.com.jdeverp.pro.model.MovimentacaoProduto;
 import br.com.jdeverp.pro.model.Pedido;
@@ -24,6 +27,7 @@ import jakarta.persistence.PersistenceContext;
  * Dentro do service vc pode criar infinitos métodos, gerar grafico, api de pagamento, gerar relatorio e etc*/
 
 @Service
+@Transactional(readOnly = true)
 public class MovimentacaoProdutoService {
 
 	@Autowired /* Injeção de dependência */
@@ -42,7 +46,8 @@ public class MovimentacaoProdutoService {
 	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
 
-	public MovimentacaoProduto salvar(MovimentacaoProduto movimentacaoProduto) {
+	@Transactional
+	public MovimentacaoProdutoDTO salvar(MovimentacaoProduto movimentacaoProduto) {
 		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
 
 		movimentacaoProduto.setProduto(validarProduto(movimentacaoProduto.getProduto(), empresaId));
@@ -53,10 +58,11 @@ public class MovimentacaoProdutoService {
 		}
 
 		movimentacaoProduto.setEmpresa(usuarioLogadoService.getEmpresaLogada());
-		return movimentacaoProdutoRepository.saveAndFlush(movimentacaoProduto);
+		return converterParaDto(movimentacaoProdutoRepository.saveAndFlush(movimentacaoProduto));
 	}
 
-	public MovimentacaoProduto atualizar(MovimentacaoProduto movimentacaoProduto) {
+	@Transactional
+	public MovimentacaoProdutoDTO atualizar(MovimentacaoProduto movimentacaoProduto) {
 		if (movimentacaoProduto.getId() == null) {
 			throw new MsgApiException("Id da movimentação de produto não informado para atualizar.");
 		}
@@ -73,7 +79,7 @@ public class MovimentacaoProdutoService {
 		}
 		existente.setProduto(validarProduto(movimentacaoProduto.getProduto(), empresaId));
 		existente.setPedido(validarPedido(movimentacaoProduto.getPedido(), empresaId));
-		return movimentacaoProdutoRepository.saveAndFlush(existente);
+		return converterParaDto(movimentacaoProdutoRepository.saveAndFlush(existente));
 	}
 
 	private Produto validarProduto(Produto produto, Long empresaId) {
@@ -95,13 +101,13 @@ public class MovimentacaoProdutoService {
 				.orElseThrow(() -> new MsgApiException("Pedido não encontrado para a empresa logada."));
 	}
 
-	public List<MovimentacaoProduto> findAll(Long idEmpresa) {
-		
-		return movimentacaoProdutoRepository.findAll(idEmpresa);
+	public List<MovimentacaoProdutoDTO> findAll(Long idEmpresa) {
+
+		return converterListaParaDto(movimentacaoProdutoRepository.findAll(idEmpresa));
 	}
 
-	public List<MovimentacaoProduto> buscaPorNome(String nome, Long idEmpresa) {
-		return movimentacaoProdutoRepository.buscaPorNome(nome, idEmpresa);
+	public List<MovimentacaoProdutoDTO> buscaPorNome(String nome, Long idEmpresa) {
+		return converterListaParaDto(movimentacaoProdutoRepository.buscaPorNome(nome, idEmpresa));
 	}
 
 	public boolean existePorNome(String nome, Long idEmpresa) {
@@ -112,6 +118,7 @@ public class MovimentacaoProdutoService {
 		return movimentacaoProdutoRepository.existePorNomeDiferenteId(id, nome, idEmpresa);
 	}
 
+	@Transactional
 	public void deleteById(Long id, Long idEmpresa) {
 		if (!movimentacaoProdutoRepository.existsById(id, idEmpresa)) {
 			throw new MsgApiException("Movimentação de produto não encontrada ou já foi deletada.");
@@ -120,7 +127,17 @@ public class MovimentacaoProdutoService {
 		movimentacaoProdutoRepository.deleteById(id, idEmpresa);
 	}
 
+	/*Exclusão em lote apaga tudo da empresa: só ROLE_ADMIN (P21)*/
+	private void exigirAdminParaExclusaoEmLote() {
+		if (!usuarioLogadoService.isAdmin()) {
+			throw new MsgApiException("Apenas administradores podem excluir registros em lote.", HttpStatus.FORBIDDEN);
+		}
+	}
+
+	@Transactional
 	public long deleteAll(Long empresaID) {
+		exigirAdminParaExclusaoEmLote();
+
 		if (movimentacaoProdutoRepository.total(empresaID) == 0) {
 			throw new MsgApiException("Nenhuma movimentação de produto encontrada para deletar ou todas já foram deletadas.");
 		}
@@ -128,7 +145,10 @@ public class MovimentacaoProdutoService {
 		return movimentacaoProdutoRepository.deleteAll(empresaID);
 	}
 
+	@Transactional
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
+		exigirAdminParaExclusaoEmLote();
+
 		List<Long> encontrados = movimentacaoProdutoRepository.buscarPorIds(ids, empresaId).stream().map(MovimentacaoProduto::getId).toList();
 		List<Long> naoEncontrados = new ArrayList<>();
 		ids.forEach(id -> {
@@ -148,38 +168,38 @@ public class MovimentacaoProdutoService {
 		movimentacaoProdutoRepository.deletarAllById(ids, empresaId);
 	}
 
-	public List<MovimentacaoProduto> buscarPorIds(Iterable<Long> ids, Long empresaId) {
-		return movimentacaoProdutoRepository.buscarPorIds(ids, empresaId);
+	public List<MovimentacaoProdutoDTO> buscarPorIds(Iterable<Long> ids, Long empresaId) {
+		return converterListaParaDto(movimentacaoProdutoRepository.buscarPorIds(ids, empresaId));
 	}
 
 	public boolean existsById(Long id, Long empresaId) {
 		return movimentacaoProdutoRepository.existsById(id, empresaId);
 	}
 
-	public List<MovimentacaoProduto> listar(Long empresaId) {
-		return movimentacaoProdutoRepository.listar(empresaId);
+	public List<MovimentacaoProdutoDTO> listar(Long empresaId) {
+		return converterListaParaDto(movimentacaoProdutoRepository.listar(empresaId));
 	}
 
-	public Optional<MovimentacaoProduto> buscarPorId(Long id, Long empresaId) {
-		return movimentacaoProdutoRepository.buscarPorId(id, empresaId);
+	public Optional<MovimentacaoProdutoDTO> buscarPorId(Long id, Long empresaId) {
+		return movimentacaoProdutoRepository.buscarPorId(id, empresaId).map(this::converterParaDto);
 	}
 
 	public long total(Long empresaId) {
 		return movimentacaoProdutoRepository.total(empresaId);
 	}
 
-	public Page<MovimentacaoProduto> listarPaginado(Long empresaId, Pageable pageable) {
-		return movimentacaoProdutoRepository.listarPaginado(empresaId, pageable);
+	public Page<MovimentacaoProdutoDTO> listarPaginado(Long empresaId, Pageable pageable) {
+		return movimentacaoProdutoRepository.listarPaginado(empresaId, pageable).map(this::converterParaDto);
 	}
 
 	// ====================Métodos específicos para Pedido====================
 
-	public List<MovimentacaoProduto> findAllByPedido(Long idPedido, Long idEmpresa) {
-		return movimentacaoProdutoRepository.findAllByPedido(idPedido, idEmpresa);
+	public List<MovimentacaoProdutoDTO> findAllByPedido(Long idPedido, Long idEmpresa) {
+		return converterListaParaDto(movimentacaoProdutoRepository.findAllByPedido(idPedido, idEmpresa));
 	}
 
-	public List<MovimentacaoProduto> buscaPorNomeByPedido(String nome, Long idPedido, Long idEmpresa) {
-		return movimentacaoProdutoRepository.buscaPorNomeByPedido(nome, idPedido, idEmpresa);
+	public List<MovimentacaoProdutoDTO> buscaPorNomeByPedido(String nome, Long idPedido, Long idEmpresa) {
+		return converterListaParaDto(movimentacaoProdutoRepository.buscaPorNomeByPedido(nome, idPedido, idEmpresa));
 	}
 
 	public boolean existePorNomeByPedido(String nome, Long idPedido, Long idEmpresa) {
@@ -190,12 +210,37 @@ public class MovimentacaoProdutoService {
 		return movimentacaoProdutoRepository.existePorNomeDiferenteIdByPedido(id, nome, idPedido, idEmpresa);
 	}
 
+	@Transactional
 	public void deleteByIdAndPedido(Long id, Long idPedido, Long idEmpresa) {
 		if (!movimentacaoProdutoRepository.buscarPorId(id, idEmpresa).filter(movimentacao -> movimentacao.getPedido() != null && movimentacao.getPedido().getId().equals(idPedido)).isPresent()) {
 			throw new MsgApiException("Movimentação de produto não encontrada ou já foi deletada.");
 		}
 
 		movimentacaoProdutoRepository.deleteByIdAndPedido(id, idPedido, idEmpresa);
+	}
+
+	// ====================Conversão para DTO====================
+
+	private MovimentacaoProdutoDTO converterParaDto(MovimentacaoProduto movimentacaoProduto) {
+		MovimentacaoProdutoDTO dto = new MovimentacaoProdutoDTO();
+		dto.setId(movimentacaoProduto.getId());
+		dto.setQuantidade(movimentacaoProduto.getQuantidade());
+		dto.setDataMovimento(movimentacaoProduto.getDataMovimento());
+		dto.setValor(movimentacaoProduto.getValor());
+		dto.setTipoMovimentacaoProduto(movimentacaoProduto.getTipoMovimentacaoProduto());
+		dto.setProdutoId(movimentacaoProduto.getProduto().getId());
+		dto.setProdutoNome(movimentacaoProduto.getProduto().getNome());
+		/*Pedido é opcional (perda, extravio, descarte)*/
+		if (movimentacaoProduto.getPedido() != null) {
+			dto.setPedidoId(movimentacaoProduto.getPedido().getId());
+			dto.setNumeroPedido(movimentacaoProduto.getPedido().getNumeroPedido());
+		}
+		dto.setEmpresaId(movimentacaoProduto.getEmpresa().getId());
+		return dto;
+	}
+
+	private List<MovimentacaoProdutoDTO> converterListaParaDto(List<MovimentacaoProduto> movimentacoes) {
+		return movimentacoes.stream().map(this::converterParaDto).toList();
 	}
 
 	// ====================dentro dos métodos do

@@ -11,6 +11,8 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 4. **Excluir por id exige que o registro exista na empresa logada.** Caso contrário: "... não encontrado ou já foi deletado" — `deleteById()` de todos os services.
 5. **A exclusão em lote é tudo ou nada.** Se algum id não existir na empresa, nada é apagado e a mensagem lista os ids não encontrados. Uma lista vazia também é recusada. — `deletarAllById()` em `PessoaService`, `ProdutoService`, `ClienteFuncionarioService`, `PedidoService`, `ItemPedidoService`, `MovimentacaoProdutoService`, `MensagemService` e `UsuarioService`.
 6. **"Apagar todos" apaga todos os registros da empresa logada.** Exige que exista pelo menos um registro — `deleteAll(empresaId)` nos mesmos 8 services.
+6a. **A exclusão em lote nunca sai da empresa logada, nem para o admin.** O delete sempre leva `empresa.id = :empresaId`, com a empresa do token. Entidade global ou empresa nula é recusada, e os deletes em lote do Spring Data sem empresa são bloqueados — `JpaJdevRepositoryImpl.validarExclusaoEmLote()` e `validar()`.
+7. **Exclusão em lote (`deletarTodos`, `deletarTodosPorIds`) é só de `ROLE_ADMIN`** (403 "Apenas administradores podem excluir registros em lote.") — `@PreAuthorize` nos controllers e `exigirAdminParaExclusaoEmLote()` nos services (P21). A exclusão dos filhos de um registro (`deletarPorPedido`, `deletarPorChamado`, `deletarTodosPorChamado`) continua aberta.
 7. **Nomes são comparados de forma tolerante.** Comparações de nome, título e número (unicidade e busca) ignoram acento, maiúsculas e espaços nas pontas — `@Query` com `unaccent(upper(trim(...)))` nos repositories.
 
 ## 1. Acesso e usuários (`Usuario`, `Role`, `RoleUsuario`)
@@ -29,7 +31,7 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 8. O bloqueio de usuário ou empresa também vale para quem já tem token: a cada requisição, `JwtFilter` → `UsuarioDetailsService.loadUserByUsername()` reavalia `liberado` e `bloqueio`.
 
 **Cadastro e edição de usuário**
-9. Só `ROLE_ADMIN` cadastra ou edita usuários (400) — `UsuarioService.salvar()`, `UsuarioService.atualizar()`.
+9. Só `ROLE_ADMIN` cadastra, edita ou exclui usuários (403) — `@PreAuthorize` em `UsuarioController` e `UsuarioService.salvar()`, `atualizar()`, `deleteById()`, `deleteAll()`. As consultas são de qualquer usuário logado, dentro da empresa dele.
 10. Login não pode repetir:
     - o service verifica dentro da empresa logada — `UsuarioService.salvar()` (`existePorLogin`);
     - no banco, a unicidade é global — `Usuario` (`unique_login`).
@@ -51,12 +53,12 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 20. Login e senha são obrigatórios, e o hash da senha é único no banco — `Usuario` (`@NotBlank`, `unique_senha`).
 
 **Troca de senha** — `UsuarioService.alterarSenha()`
-21. O usuário precisa estar liberado e a empresa, desbloqueada.
+21. O usuário comum só troca a própria senha (403 "Você só pode alterar a sua própria senha."); o admin troca a de qualquer usuário da empresa. O usuário precisa estar liberado e a empresa, desbloqueada.
 22. A nova senha precisa ser igual à confirmação.
 23. A nova senha precisa ser diferente da atual.
 24. A senha atual informada precisa conferir com a gravada.
 
-**Roles (`/api/role`)**
+**Roles (`/api/role`)** — todo o endpoint é só de `ROLE_ADMIN` (403): `@PreAuthorize` em `RoleController`; `RoleService.salvar()`, `atualizar()` e `deleteById()` também conferem.
 25. `acesso` precisa começar com `ROLE_` — `RoleService.salvar()`, `RoleService.atualizar()`.
 26. `acesso` é gravado em maiúsculas — `Role.setAcesso()`.
 27. `acesso` é único:
@@ -65,7 +67,7 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
     - `Role` (`unique_acesso`).
 28. É admin quem tem `ROLE_ADMIN`. O admin é global, sem vínculo a uma empresa — `Usuario.idAdmin()`, `UsuarioLogadoService.isAdmin()`.
 
-**Atribuição de roles (`/api/roleUsuario`)**
+**Atribuição de roles (`/api/roleUsuario`)** — todo o endpoint é só de `ROLE_ADMIN` (403): `@PreAuthorize` em `RoleUsuarioController`; `RoleUsuarioService.salvar()`, `atualizar()`, `deleteById()` e `deleteByUsuarioAndRole()` também conferem.
 29. Acesso e usuário são obrigatórios — `RoleUsuarioService.salvar()`, `RoleUsuarioService.atualizar()`.
 30. O mesmo acesso não pode ser atribuído duas vezes ao mesmo usuário:
     - `RoleUsuarioService.salvar()` (`existePorUsuarioERole`);
@@ -75,11 +77,11 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 
 ## 2. SaaS: planos e empresas (`Plano`, `Empresa`)
 
-**Plano (global)**
+**Plano (global)** — todo o endpoint é só de `ROLE_ADMIN` (403): `@PreAuthorize` em `PlanoController`; `PlanoService.salvar()`, `atualizar()` e `deleteById()` também conferem.
 32. O nome do plano é único em todo o sistema — `PlanoService.salvar()`, `PlanoService.atualizar()`.
 33. Nome, descrição, valor mensal, limites e tipo são obrigatórios — `Plano` (`@NotBlank`/`@NotNull`).
-34. Pela API, o valor mensal vai de R$ 49 a R$ 200 — `Plano.valorMensal` (`@Min(49)`, `@Max(200)`).
-35. No banco, o plano `FREE` deve ter valor 0, e os demais, entre 49 e 200 — CHECK `plano_valor_mensal_check` em `V1_INIT.sql`.
+34. O valor mensal segue o CHECK do banco: o plano `FREE` vale 0; os demais, de R$ 49 a R$ 200 — `PlanoService.validarValorMensal()` e CHECK `plano_valor_mensal_check` em `V1_INIT.sql`.
+35. O plano `FREE` é inserido direto no banco: pela API não se cadastra outro nem se transforma outro plano em FREE ("Já existe o plano FREE: ele é cadastrado direto no banco e não pode haver outro.") — `PlanoService.salvar()`, `atualizar()` (P11).
 36. O limite de usuários e o limite de clientes vão de 1 a 150 — `Plano.limiteUsuario`, `Plano.limiteCliente`.
 37. Tipos de plano: `FREE`, `PRO`, `ENTERPRISE` — `TipoPlano`.
 38. Planos do seed — `V1_INIT.sql`:
@@ -87,7 +89,7 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
     - "Plano Pro": PRO, R$ 50, 30 usuários, 15 clientes.
 
 **Empresa (global)**
-39. Só `ROLE_ADMIN` cadastra, edita ou exclui empresas (403) — `EmpresaService.salvar()`, `atualizar()`, `deleteById()`.
+39. Só `ROLE_ADMIN` cadastra, edita, exclui, lista e pesquisa empresas (403) — `@PreAuthorize` em `EmpresaController` e `EmpresaService`. O usuário comum consulta só a própria empresa (`buscarPorId`); outra empresa dá 403 "Apenas administradores podem consultar outras empresas.". No `salvar()`, a permissão é conferida antes de tudo.
 40. Cada pessoa pode ter no máximo uma empresa:
     - `EmpresaService.salvar()` (`existePorPessoa`);
     - `Empresa` (`unique_pessoa_empresa`).
@@ -104,10 +106,12 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 
 **Pessoa**
 45. O nome da pessoa é único dentro da empresa — `PessoaService.salvar()` (`existePorNome`), `PessoaService.atualizar()` (`existePorNomeDiferenteId`).
-46. Só é possível editar pessoas da empresa logada — `PessoaService.atualizar()` (`existsById(id, empresaId)`).
-47. CPF é obrigatório e validado — `Pessoa.cpf` (`@NotNull`, `@CPF`).
-48. CNPJ é validado e aceita o formato alfanumérico — `Pessoa.cnpj` (`@CNPJ(format = ALPHANUMERIC)`). No banco a coluna é `NOT NULL`.
-49. E-mail é validado e, no banco, `NOT NULL` — `Pessoa.email` (`@Email`).
+46. Só é possível editar pessoas da empresa logada — `PessoaService.atualizar()` (`buscarPorId(id, empresaId)`).
+47. CPF é obrigatório só para pessoa física ("Informe o CPF para pessoa física"); quando informado, é validado — `Pessoa.isCpfInformadoParaPessoaFisica()` (`@AssertTrue`) e `Pessoa.cpf` (`@CPF`); no banco, `pessoa_cpf_pessoa_fisica_check` (P13, V2).
+48. CNPJ é obrigatório só para pessoa jurídica ("Informe o CNPJ para pessoa jurídica"); quando informado, é validado e aceita o formato alfanumérico — `Pessoa.isCnpjInformadoParaPessoaJuridica()` (`@AssertTrue`) e `Pessoa.cnpj` (`@CNPJ(format = ALPHANUMERIC)`); no banco, `pessoa_cnpj_pessoa_juridica_check` (P13, V2).
+48a. CPF ou CNPJ em branco conta como não informado e é gravado como `NULL`, para duas pessoas sem o documento não baterem na unique — `Pessoa.setCpf()`, `setCnpj()`.
+49. E-mail é obrigatório para qualquer tipo de pessoa e validado — `Pessoa.email` (`@NotBlank`, `@Email`), como a coluna `NOT NULL` e `pessoa_email_preenchido_check` (V2).
+49a. A data de cadastro é a de hoje, preenchida pelo back-end; a do request é ignorada e a edição mantém a original — `PessoaService.salvar()`, `atualizar()` (P20).
 50. CPF, CNPJ, e-mail e inscrição estadual são únicos **em todo o banco**, não só na empresa — `Pessoa` (`unique_cpf`, `unique_cnpj`, `unique_email`, `unique_incricao_estadual`).
 51. Campos obrigatórios — `Pessoa` (`@NotBlank`/`@NotNull`):
     - nome, telefone, tipo de pessoa;
@@ -138,7 +142,7 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 63. O SKU é obrigatório e único dentro da empresa. A unicidade só é garantida pelo banco, sem checagem no service — `Produto` (`unique_sku_empresa`).
 64. A categoria é obrigatória e precisa ser da empresa logada — `ProdutoService.validarCategoria()`.
 65. Nome, imagem e unidade de medida são obrigatórios — `Produto`.
-66. Preço, estoque e estoque mínimo precisam ser ≥ 1. As mensagens dizem "maior que 1" — `Produto` (`@Min(1)`).
+66. Preço, estoque e estoque mínimo são obrigatórios e no mínimo 1, como os CHECK do banco — `Produto` (`@NotNull`, `@Min(1)`) (P15).
 67. Unidades de medida: `CENTIMETRO`, `METRO`, `UNIDADE`, `QUILO` — `UnidadeMedida`.
 
 **Movimentação de produto**
@@ -196,49 +200,60 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 89. O chamado é obrigatório e precisa ser da empresa logada — `MensagemService.validarChamado()`.
 90. Atendente e cliente são obrigatórios e precisam ser usuários da empresa logada — `MensagemService.validarUsuario()`.
 91. A data de envio é sempre a data de hoje, e a edição não a altera — `MensagemService.salvar()`.
-92. O conteúdo é obrigatório. Uma mensagem nova nasce com `lida=false` — `Mensagem`.
+92. Conteúdo e arquivo são obrigatórios (o arquivo, como a coluna `NOT NULL`, P20). Uma mensagem nova nasce com `lida=false` — `Mensagem`.
 93. Para excluir uma mensagem por chamado, ela precisa pertencer ao chamado informado — `MensagemService.deleteByIdAndChamado()`.
 94. Para apagar as mensagens de um chamado, o chamado precisa ter pelo menos uma — `MensagemService.deleteAllByChamado()`.
 
 ## Pontos de atenção (duplicidades, contradições e lacunas)
 
 **Contradições entre camadas**
-- **Plano FREE x validação da API.** O CHECK do banco exige valor 0 para o FREE, mas `@Min(49)` em `Plano.valorMensal` recusa 0. Pela API, não dá para cadastrar nem editar um plano FREE (regras 34 e 35). (P11)
 - **Unicidade de login.** O service verifica por empresa (`existePorLogin(login, empresaId)`), mas o banco e o login são globais (`unique_login`, `buscaPorLogin` sem empresa). Um login repetido em outra empresa passa pelo service e quebra no banco.
-- **Unicidade de pessoa.** O nome é único por empresa, enquanto CPF, CNPJ, e-mail e inscrição estadual são únicos no banco inteiro. Na prática, a mesma pessoa não pode estar em duas empresas. O mesmo vale para `ClienteFuncionario.unique_pessoa` (global) frente a `existeParaPessoa` (por empresa). (P12)
-- **CPF e CNPJ obrigatórios ao mesmo tempo.** Isso vale para qualquer `TipoPessoa`: `cpf` com `@NotNull` e `cnpj` com `nullable=false`. A intenção provável é exigir um ou outro conforme FISICA/JURIDICA. (P13)
-- **`ClienteFuncionario`: usuário opcional no cadastro, obrigatório na edição.** Um cadastro sem usuário não pode ser editado (regras 58 e 59). (P14)
+- **Unicidade de pessoa.** O nome é único por empresa, enquanto CPF, CNPJ, e-mail e inscrição estadual são únicos no banco inteiro. Na prática, a mesma pessoa não pode estar em duas empresas. O mesmo vale para `ClienteFuncionario.unique_pessoa` (global) frente a `existeParaPessoa` (por empresa). Decidido manter assim (P12).
+- **`ClienteFuncionario`: usuário opcional no cadastro, obrigatório na edição.** Um cadastro sem usuário não pode ser editado (regras 58 e 59). Decidido que o usuário fica opcional também na edição; falta implementar (P14).
 - **Senha mínima.** O código aceita 5 caracteres, mas a mensagem diz "mais de 5" (regra 11).
-- **Estoque e preço mínimos.** `@Min(1)` aceita 1, mas a mensagem diz "maior que 1". Além disso, nenhum produto pode ter estoque 0 (regra 66). (P15)
+- **Estoque mínimo 1 x baixa de estoque.** Pelo CHECK do banco, o estoque nunca fica abaixo de 1 (regra 66). Quando a baixa automática existir (P17), vender a última unidade daria erro.
 
-**Autorização inconsistente entre módulos**
-- **Admin exigido de forma desigual.** `Empresa` e `Usuario` (salvar/atualizar) exigem `ROLE_ADMIN`. `Plano`, `Role` e `RoleUsuario` não exigem nada: qualquer usuário autenticado pode criar planos, criar roles e atribuir `ROLE_ADMIN` a si mesmo. (P10)
-- **Status HTTP diferente para a mesma negação.** `EmpresaService` devolve 403 quando falta `ROLE_ADMIN`, e `UsuarioService` devolve 400.
-- **Exclusão de usuários sem admin.** `UsuarioService.deleteById()` e `deleteAll()` não exigem admin, embora cadastrar exija. O `deleteAll` apaga inclusive o usuário logado.
-- **Listagem de empresas sem admin.** Qualquer usuário autenticado lista e busca todas as empresas de todos os tenants — `EmpresaService.findAll()`, `buscaPorNome()`.
+**Validação alinhada às restrições do banco** — corrigida em 2026-11-11 (P11, P13, P15, P20):
+- Plano FREE: a API recusava o valor 0 que o CHECK exige. Agora segue o CHECK, e a API não cadastra outro FREE (regras 34 e 35).
+- `Pessoa`: o CNPJ e o e-mail não tinham `@NotBlank`, e a falta só aparecia como erro do banco. Agora o e-mail é obrigatório para todos, o CPF só para pessoa física e o CNPJ só para jurídica, no back-end e no banco (script `V2_PESSOA_DOCUMENTO_POR_TIPO.sql`). A data de cadastro é preenchida pelo back-end (regras 47 a 49a).
+- `Produto`: as mensagens diziam "maior que 1" para um mínimo de 1, e faltava `@NotNull` (regra 66).
+- `Mensagem.arquivo` era `NOT NULL` sem validação na entidade (regra 92).
 
-**Lacunas de isolamento por empresa**
-- `CategoriaService.atualizar()` não verifica se a categoria é da empresa logada, ao contrário dos outros services.
-- `ClienteFuncionarioService.salvar()` não verifica se a pessoa informada é da empresa logada. O `atualizar()` verifica.
-- `RoleUsuarioService.salvar()` e `atualizar()` não verificam se o usuário informado é da empresa logada.
-- `MensagemService.updateLida()` não verifica se a mensagem existe.
+**Autorização da área de administração** — corrigida em 2026-11-11 (P9 e P10), com testes em `security/TestPermissoesAdmin` e nos `Test*Service`:
+- `Plano`, `Role` e `RoleUsuario` não exigiam nada: qualquer usuário criava planos, renomeava roles e se dava `ROLE_ADMIN`. Agora são só de `ROLE_ADMIN`.
+- A negação por falta de `ROLE_ADMIN` é sempre 403 (o `UsuarioService` devolvia 400).
+- `UsuarioService.deleteById()` e `deleteAll()` não exigiam admin. Agora exigem.
+- Qualquer usuário listava e pesquisava as empresas de todos os tenants. Agora só o admin; o usuário comum vê só a própria.
+- `alterarSenha` aceitava o id de qualquer usuário da empresa. Agora o usuário comum só troca a própria senha.
+- O `sort` da paginação era concatenado no JPQL: dava para injetar uma subconsulta no `order by` e ler dados de qualquer tabela, inclusive o token de sessão do admin. Agora só aceita o nome de um campo simples da entidade (400 "Campo de ordenação inválido.") — `JpaJdevRepositoryImpl.validarCampoOrdenacao()`.
 
-**Regras que o modelo sugere, mas não existem no código** (P16–P20)
+**Lacunas de isolamento por empresa** — corrigidas em 2026-11-11, com testes em `TestCategoriaService`, `TestClienteFuncionarioService`, `TestRoleUsuarioService`, `TestMensagemService` e nos testes de controller:
+- `CategoriaService.atualizar()` busca a categoria com `buscarPorId(id, empresaId)` e grava o registro existente ("Categoria não encontrada para a empresa logada.").
+- `ClienteFuncionarioService.salvar()` busca a pessoa na empresa logada e, se vier, o usuário também.
+- `RoleUsuarioService.salvar()` e `atualizar()` buscam o usuário na empresa logada e o acesso no banco. O `atualizar()` também confere se o registro é da empresa logada.
+- `MensagemService.updateLida()` confere se a mensagem existe na empresa logada.
+- `/api/usuario/buscar-por-login/{login}` devolvia usuário de qualquer empresa (o `buscaPorLogin` não filtra empresa, por ser a consulta do login). Agora devolve 404 para login de outra empresa.
+
+**Regras que o modelo sugere, mas não existem no código** (P16–P19)
 - **Limites do plano não aplicados.** `limiteUsuario` e `limiteCliente` não são verificados ao cadastrar usuário ou cliente. `totalUsuario` e `totalCliente` da empresa vêm do request, não são calculados. (P16)
 - **Plano ativo e vigência não verificados.** `planoAtivo` e `vigenciaPlano` não são checados no login nem em outro ponto. Só `bloqueio` bloqueia. (P16)
 - **Estoque não atualizado.** `MovimentacaoProduto` e `ItemPedido` não alteram `Produto.estoque`, e nada impede vender sem estoque. (P17)
 - **Totais não calculados.** Os totais de `Pedido` e `ItemPedido` não são calculados nem conferidos, e não há relação entre os itens e o total do pedido. (P18)
 - **Sem transição de status.** Não há regra de mudança de status em `Pedido` nem em `Chamado`. `dataCancelamento`, `dataPagamento`, `dataFechamento` e `fechadoUser` não dependem do status (ex.: `FECHADO` sem `fechadoUser`). (P19)
-- **Datas obrigatórias sem preenchimento.** `Pessoa.dataCadastro` é `NOT NULL` no banco, mas o service não preenche nem valida. O mesmo vale para `Mensagem.arquivo`, que é `NOT NULL` sem `@NotNull`. (P20)
 
 **Defeitos pontuais encontrados ao levantar as regras**
-- **`EmpresaDTO.pessoaId` recebe o id do plano.** Acontece em todos os métodos de `EmpresaService` (`dto.setPessoaId(empresa.getPlano().getId())`).
-- **Ordem das verificações em `EmpresaService.salvar()`.** Ele chama `existePorPessoa` antes de checar se a pessoa é nula e antes de checar se o usuário é admin. A mensagem de duplicidade busca a pessoa só na empresa logada (`.get()` sem tratamento).
-- **`null` verificado tarde demais em `UsuarioService.alterarSenha()`.** Ele chama `.get()` no `Optional` antes de testar `null`: um usuário inexistente gera 500 em vez da mensagem prevista.
+- **Ordem das verificações em `EmpresaService.salvar()`:** corrigida em 2026-11-11. Agora confere admin, depois pessoa nula, depois duplicidade; a mensagem só traz o nome se a pessoa for da empresa logada.
 - **Duplicidade de item comparada pelo nome.** `ItemPedido` compara o nome do produto, não o id (regra 79). Hoje isso funciona porque o nome é único por empresa (regra 62). Se essa regra mudar, a checagem de item duplicado deixa de valer.
-- **Mensagens copiadas de outro contexto.**
-  - `UsuarioService.atualizar()` diz "Apenas administradores podem cadastrar novos usuários".
-  - `Pedido.dataPedido` tem a mensagem "Informe a forma de pagamento".
+- **Mensagem copiada de outro contexto:** `Pedido.dataPedido` tem a mensagem "Informe a forma de pagamento".
+
+**Corrigidos em 2026-11-11** (cobertos pelos testes de controller)
+- `EmpresaDTO.pessoaId` recebia o id do plano; o `planoId` era `String` e nunca era preenchido. Agora vêm `pessoaId`, `planoId` e `planoNome` corretos.
+- `UsuarioService.alterarSenha()` e `atualizar()` chamavam `.get()` no `Optional` sem testar: usuário inexistente dava 500. Agora dão "Usuário não encontrado." e "Usuário não encontrado para a empresa logada.". A mensagem do `atualizar()` diz "atualizar usuários".
+- `EmpresaService.buscaPorId()` dava 500 para id inexistente. Agora: "Empresa com id: X não foi encontrada.".
+- Os `deletarTodos` e `deletarTodosPorIds` davam 500 ("read-only transaction"): o delete em lote do `JpaJdevRepositoryImpl` herdava a transação somente leitura do `SimpleJpaRepository`. Os services agora abrem transação de escrita.
+- Enum no JSON: o Jackson 3 lia e escrevia pelo `toString()` (a descrição), então salvar com `"DINHEIRO"` dava 400. Agora é sempre o nome do enum (`config/ConfiguracaoJackson`).
+- `empresa` com `@NotNull` em `Chamado`, `ItemPedido`, `Mensagem`, `MovimentacaoProduto` e `Pedido` (e `Chamado.dataAbertura`) obrigava o front a mandar um valor que o service sobrescreve. O `@NotNull` saiu; as colunas continuam `NOT NULL`.
+- O buscarPorId de usuário não trazia `login` nem `pessoaId`, então o retorno não servia para editar.
 
 ## Pendências
-As dúvidas deste documento estão em `docs/pendencias.md` (P10 a P20).
+As decisões e dúvidas deste documento estão em `docs/pendencias.md`. P14, P16 e P18 já foram decididas e esperam implementação; P17 e P19 esperam a confirmação das matrizes.

@@ -12,7 +12,11 @@ paths:
 - **Relacionamento novo:** `@ManyToOne`/`@OneToOne` LAZY.
   - Não mude os EAGER existentes (`Usuario.acessos`, `Usuario.empresa`, `Produto.categoria`).
   - Não crie `@OneToMany` nem coleções (veja `Plano`); liste os filhos pelo repository do filho.
-- **Lombok:** `@Data`. Em relação bidirecional, use `@Getter @Setter`.
+- **Lombok e `EntidadeBase`:** `@Getter @Setter @ToString(onlyExplicitlyIncluded = true)` e `extends EntidadeBase`. Nunca use `@Data` nem `@EqualsAndHashCode`.
+  - `@ToString` gerado pelo Lombok lê os relacionamentos LAZY e dá `LazyInitializationException` fora da sessão; `@EqualsAndHashCode` também.
+  - **`@ToString.Include`:** só em `id` e campos simples.
+    - Nunca em relacionamento, coleção, senha, token, CPF, CNPJ, e-mail, telefone, endereço, nem em texto longo ou base64 (`logoMarca`, `imagem`, `arquivo`).
+  - **`equals`/`hashCode`:** vêm do `EntidadeBase` e comparam pelo id, sem carregar o proxy. Não sobrescreva.
 - **Campo obrigatório:** Bean Validation com mensagem em português **e** `@Column(nullable = false)`.
 - **Tipos:** enum com `@Enumerated(EnumType.STRING)`, em `enums/`; dinheiro novo em `BigDecimal` (padrão `BigDecimal.ZERO`; `Produto.preco` e `Plano.valorMensal` continuam `Double`); quantidade em `Double` com `@DecimalMin("0.1")`.
 - **Datas e textos:** datas em `LocalDate`, preenchidas no service (não há auditoria); texto longo ou base64 em `columnDefinition = "text"`.

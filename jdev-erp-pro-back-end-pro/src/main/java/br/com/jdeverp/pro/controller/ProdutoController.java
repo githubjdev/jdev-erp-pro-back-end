@@ -8,6 +8,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,11 +18,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.jdeverp.pro.dto.ProdutoDTO;
 import br.com.jdeverp.pro.model.Produto;
 import br.com.jdeverp.pro.service.ProdutoService;
 import br.com.jdeverp.pro.service.UsuarioLogadoService;
 import jakarta.validation.Valid;
 
+@PreAuthorize("isAuthenticated()")
 @RestController
 @RequestMapping("/api/produto")
 public class ProdutoController {
@@ -33,23 +36,23 @@ public class ProdutoController {
         private UsuarioLogadoService usuarioLogadoService;
 
         @PostMapping("/salvar")
-        public ResponseEntity<Produto> salvar(@RequestBody @Valid Produto produto) {
+        public ResponseEntity<ProdutoDTO> salvar(@RequestBody @Valid Produto produto) {
                 return ResponseEntity.ok(produtoService.salvar(produto));
         }
 
         @PostMapping("/atualizar")
-        public ResponseEntity<Produto> atualizar(@RequestBody @Valid Produto produto) {
+        public ResponseEntity<ProdutoDTO> atualizar(@RequestBody @Valid Produto produto) {
                 return ResponseEntity.ok(produtoService.atualizar(produto));
         }
 
         @GetMapping("/listar")
-        public ResponseEntity<List<Produto>> findAll() {
+        public ResponseEntity<List<ProdutoDTO>> findAll() {
                 return ResponseEntity.ok(produtoService.findAll(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/buscaPorNome/{nome}")
-        public ResponseEntity<List<Produto>> buscaPorNome(@PathVariable String nome) {
+        public ResponseEntity<List<ProdutoDTO>> buscaPorNome(@PathVariable String nome) {
                 return ResponseEntity.ok(produtoService.buscaPorNome(nome,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
@@ -68,13 +71,13 @@ public class ProdutoController {
         }
 
         @GetMapping("/listarTodos")
-        public ResponseEntity<List<Produto>> listar() {
+        public ResponseEntity<List<ProdutoDTO>> listar() {
                 return ResponseEntity.ok(produtoService.listar(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/buscarPorId/{id}")
-        public ResponseEntity<Produto> buscarPorId(@PathVariable Long id) {
+        public ResponseEntity<ProdutoDTO> buscarPorId(@PathVariable Long id) {
                 return produtoService.buscarPorId(id, usuarioLogadoService.getEmpresaIdLogada())
                                 .map(ResponseEntity::ok)
                                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -87,7 +90,7 @@ public class ProdutoController {
         }
 
         @PostMapping("/buscarPorIds")
-        public ResponseEntity<List<Produto>> buscarPorIds(@RequestBody Iterable<Long> ids) {
+        public ResponseEntity<List<ProdutoDTO>> buscarPorIds(@RequestBody Iterable<Long> ids) {
                 return ResponseEntity.ok(produtoService.buscarPorIds(ids,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
@@ -99,7 +102,7 @@ public class ProdutoController {
         }
 
         @GetMapping("/paginado")
-        public ResponseEntity<Page<Produto>> listarPaginado(
+        public ResponseEntity<Page<ProdutoDTO>> listarPaginado(
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
                         @RequestParam(defaultValue = "id") String sort,
@@ -117,12 +120,14 @@ public class ProdutoController {
                 return ResponseEntity.ok("Produto deletado com sucesso.");
         }
 
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         @DeleteMapping("/deletarTodos")
         public ResponseEntity<Long> deleteAll() {
                 return ResponseEntity.ok(produtoService.deleteAll(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         @DeleteMapping("/deletarTodosPorIds")
         public ResponseEntity<Void> deletarAllById(@RequestBody Iterable<Long> ids) {
                 produtoService.deletarAllById(ids,

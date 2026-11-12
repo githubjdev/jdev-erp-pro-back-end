@@ -28,11 +28,15 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		response.setCharacterEncoding("UTF-8");
-		
-		ResponseApi responseApi = new ResponseApi(new Date(), 
-													401, 
-													"Unauthorized", 
-													"Usuário não autenticado ou token inválido",
+
+		/*Motivo deixado pelo JwtFilter quando recusou o token (expirado, inválido, sessão encerrada...)*/
+		Object motivoRecusa = request.getAttribute(JwtFilter.ATRIBUTO_MOTIVO_RECUSA);
+		String mensagem = motivoRecusa != null ? motivoRecusa.toString() : "Usuário não autenticado ou token inválido";
+
+		ResponseApi responseApi = new ResponseApi(new Date(),
+													401,
+													"Unauthorized",
+													mensagem,
 													request.getRequestURI());
 		
 		response.getWriter().write(objectMapperUtil.objetoParaJson(responseApi));

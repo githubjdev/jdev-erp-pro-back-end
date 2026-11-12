@@ -8,6 +8,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -18,11 +19,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.jdeverp.pro.dto.MensagemDTO;
 import br.com.jdeverp.pro.model.Mensagem;
 import br.com.jdeverp.pro.service.MensagemService;
 import br.com.jdeverp.pro.service.UsuarioLogadoService;
 import jakarta.validation.Valid;
 
+@PreAuthorize("isAuthenticated()")
 @RestController
 @RequestMapping("/api/mensagem")
 public class MensagemController {
@@ -34,23 +37,23 @@ public class MensagemController {
         private UsuarioLogadoService usuarioLogadoService;
 
         @PostMapping("/salvar")
-        public ResponseEntity<Mensagem> salvar(@RequestBody @Valid Mensagem mensagem) {
+        public ResponseEntity<MensagemDTO> salvar(@RequestBody @Valid Mensagem mensagem) {
                 return ResponseEntity.ok(mensagemService.salvar(mensagem));
         }
 
         @PostMapping("/atualizar")
-        public ResponseEntity<Mensagem> atualizar(@RequestBody @Valid Mensagem mensagem) {
+        public ResponseEntity<MensagemDTO> atualizar(@RequestBody @Valid Mensagem mensagem) {
                 return ResponseEntity.ok(mensagemService.atualizar(mensagem));
         }
 
         @GetMapping("/listar")
-        public ResponseEntity<List<Mensagem>> listar() {
+        public ResponseEntity<List<MensagemDTO>> listar() {
                 return ResponseEntity.ok(mensagemService.findAll(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/buscaPorConteudo/{conteudo}")
-        public ResponseEntity<List<Mensagem>> buscaPorConteudo(@PathVariable String conteudo) {
+        public ResponseEntity<List<MensagemDTO>> buscaPorConteudo(@PathVariable String conteudo) {
                 return ResponseEntity.ok(mensagemService.buscaPorConteudo(conteudo,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
@@ -69,13 +72,13 @@ public class MensagemController {
         }
 
         @GetMapping("/listarTodos")
-        public ResponseEntity<List<Mensagem>> listarTodos() {
+        public ResponseEntity<List<MensagemDTO>> listarTodos() {
                 return ResponseEntity.ok(mensagemService.listar(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/buscarPorId/{id}")
-        public ResponseEntity<Mensagem> buscarPorId(@PathVariable Long id) {
+        public ResponseEntity<MensagemDTO> buscarPorId(@PathVariable Long id) {
                 return mensagemService.buscarPorId(id, usuarioLogadoService.getEmpresaIdLogada())
                                 .map(ResponseEntity::ok)
                                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -88,7 +91,7 @@ public class MensagemController {
         }
 
         @PostMapping("/buscarPorIds")
-        public ResponseEntity<List<Mensagem>> buscarPorIds(@RequestBody Iterable<Long> ids) {
+        public ResponseEntity<List<MensagemDTO>> buscarPorIds(@RequestBody Iterable<Long> ids) {
                 return ResponseEntity.ok(mensagemService.buscarPorIds(ids,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
@@ -100,7 +103,7 @@ public class MensagemController {
         }
 
         @GetMapping("/paginado")
-        public ResponseEntity<Page<Mensagem>> listarPaginado(
+        public ResponseEntity<Page<MensagemDTO>> listarPaginado(
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
                         @RequestParam(defaultValue = "id") String sort,
@@ -118,12 +121,14 @@ public class MensagemController {
                 return ResponseEntity.ok("Mensagem deletada com sucesso.");
         }
 
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         @DeleteMapping("/deletarTodos")
         public ResponseEntity<Long> deleteAll() {
                 return ResponseEntity.ok(mensagemService.deleteAll(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         @DeleteMapping("/deletarTodosPorIds")
         public ResponseEntity<Void> deletarAllById(@RequestBody Iterable<Long> ids) {
                 mensagemService.deletarAllById(ids,
@@ -132,13 +137,13 @@ public class MensagemController {
         }
 
         @GetMapping("/listarPorChamado/{idChamado}")
-        public ResponseEntity<List<Mensagem>> findAllByChamado(@PathVariable Long idChamado) {
+        public ResponseEntity<List<MensagemDTO>> findAllByChamado(@PathVariable Long idChamado) {
                 return ResponseEntity.ok(mensagemService.findAllByChamado(idChamado,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/buscaPorConteudoPorChamado/{idChamado}/{conteudo}")
-        public ResponseEntity<List<Mensagem>> buscaPorConteudoByChamado(
+        public ResponseEntity<List<MensagemDTO>> buscaPorConteudoByChamado(
                         @PathVariable Long idChamado, @PathVariable String conteudo) {
                 return ResponseEntity.ok(mensagemService.buscaPorConteudoByChamado(conteudo, idChamado,
                                 usuarioLogadoService.getEmpresaIdLogada()));
@@ -180,13 +185,13 @@ public class MensagemController {
         }
 
         @GetMapping("/listarNaoLidas")
-        public ResponseEntity<List<Mensagem>> findAllNaoLidas() {
+        public ResponseEntity<List<MensagemDTO>> findAllNaoLidas() {
                 return ResponseEntity.ok(mensagemService.findAllNaoLidas(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/listarNaoLidasPorChamado/{idChamado}")
-        public ResponseEntity<List<Mensagem>> findAllNaoLidasByChamado(@PathVariable Long idChamado) {
+        public ResponseEntity<List<MensagemDTO>> findAllNaoLidasByChamado(@PathVariable Long idChamado) {
                 return ResponseEntity.ok(mensagemService.findAllNaoLidasByChamado(idChamado,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
@@ -204,7 +209,7 @@ public class MensagemController {
         }
 
         @GetMapping("/listarPorAtendente/{idAtendente}")
-        public ResponseEntity<List<Mensagem>> findAllByAtendente(@PathVariable Long idAtendente) {
+        public ResponseEntity<List<MensagemDTO>> findAllByAtendente(@PathVariable Long idAtendente) {
                 return ResponseEntity.ok(mensagemService.findAllByAtendente(idAtendente,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
@@ -216,7 +221,7 @@ public class MensagemController {
         }
 
         @GetMapping("/listarPorCliente/{idCliente}")
-        public ResponseEntity<List<Mensagem>> findAllByCliente(@PathVariable Long idCliente) {
+        public ResponseEntity<List<MensagemDTO>> findAllByCliente(@PathVariable Long idCliente) {
                 return ResponseEntity.ok(mensagemService.findAllByCliente(idCliente,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
@@ -228,20 +233,20 @@ public class MensagemController {
         }
 
         @GetMapping("/listarPorChamadoEAtendente/{idChamado}/{idAtendente}")
-        public ResponseEntity<List<Mensagem>> findAllByChamadoAndAtendente(
+        public ResponseEntity<List<MensagemDTO>> findAllByChamadoAndAtendente(
                         @PathVariable Long idChamado, @PathVariable Long idAtendente) {
                 return ResponseEntity.ok(mensagemService.findAllByChamadoAndAtendente(idChamado, idAtendente,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/listarNaoLidasPorAtendente/{idAtendente}")
-        public ResponseEntity<List<Mensagem>> findAllNaoLidasByAtendente(@PathVariable Long idAtendente) {
+        public ResponseEntity<List<MensagemDTO>> findAllNaoLidasByAtendente(@PathVariable Long idAtendente) {
                 return ResponseEntity.ok(mensagemService.findAllNaoLidasByAtendente(idAtendente,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/listarNaoLidasPorCliente/{idCliente}")
-        public ResponseEntity<List<Mensagem>> findAllNaoLidasByCliente(@PathVariable Long idCliente) {
+        public ResponseEntity<List<MensagemDTO>> findAllNaoLidasByCliente(@PathVariable Long idCliente) {
                 return ResponseEntity.ok(mensagemService.findAllNaoLidasByCliente(idCliente,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }

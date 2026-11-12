@@ -12,6 +12,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+import br.com.jdeverp.pro.security.JwtAccessDeniedHandler;
 import br.com.jdeverp.pro.util.ExceptionUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -49,6 +53,31 @@ public class GlobalExceptionHandler {
 	}
 	
 	
+	/*
+	 * @PreAuthorize negado no controller (ex.: endpoint só de ROLE_ADMIN).
+	 * Sem este handler, a exceção cairia no handler de Exception e viraria 500.
+	 */
+	@ExceptionHandler(AccessDeniedException.class)
+	public ResponseEntity<ResponseApi> acessoNegado(AccessDeniedException ex, HttpServletRequest request) {
+
+		Authentication autenticacao = SecurityContextHolder.getContext().getAuthentication();
+		log.warn("Acesso negado [{} {}] para o usuário: {}",
+				request.getMethod(),
+				request.getRequestURI(),
+				autenticacao != null ? autenticacao.getName() : "anônimo");
+
+		ResponseApi responseApi = new ResponseApi(new Date(),
+												HttpStatus.FORBIDDEN.value(),
+												"Forbidden",
+												JwtAccessDeniedHandler.MSG_SEM_PERMISSAO,
+												request.getRequestURI());
+
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(responseApi);
+	}
+
+
 	@ExceptionHandler(UsernameNotFoundException.class)
 	public ResponseEntity<ResponseApi> erroUserNaoEncontradoException(UsernameNotFoundException ex,  
 			HttpServletRequest request ){

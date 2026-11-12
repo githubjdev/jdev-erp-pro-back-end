@@ -8,6 +8,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,11 +18,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.jdeverp.pro.dto.PedidoDTO;
 import br.com.jdeverp.pro.model.Pedido;
 import br.com.jdeverp.pro.service.PedidoService;
 import br.com.jdeverp.pro.service.UsuarioLogadoService;
 import jakarta.validation.Valid;
 
+@PreAuthorize("isAuthenticated()")
 @RestController
 @RequestMapping("/api/pedido")
 public class PedidoController {
@@ -33,23 +36,23 @@ public class PedidoController {
         private UsuarioLogadoService usuarioLogadoService;
 
         @PostMapping("/salvar")
-        public ResponseEntity<Pedido> salvar(@RequestBody @Valid Pedido pedido) {
+        public ResponseEntity<PedidoDTO> salvar(@RequestBody @Valid Pedido pedido) {
                 return ResponseEntity.ok(pedidoService.salvar(pedido));
         }
 
         @PostMapping("/atualizar")
-        public ResponseEntity<Pedido> atualizar(@RequestBody @Valid Pedido pedido) {
+        public ResponseEntity<PedidoDTO> atualizar(@RequestBody @Valid Pedido pedido) {
                 return ResponseEntity.ok(pedidoService.atualizar(pedido));
         }
 
         @GetMapping("/listar")
-        public ResponseEntity<List<Pedido>> findAll() {
+        public ResponseEntity<List<PedidoDTO>> findAll() {
                 return ResponseEntity.ok(pedidoService.findAll(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/buscaPorNumeroPedido/{numeroPedido}")
-        public ResponseEntity<List<Pedido>> buscaPorNumeroPedido(@PathVariable String numeroPedido) {
+        public ResponseEntity<List<PedidoDTO>> buscaPorNumeroPedido(@PathVariable String numeroPedido) {
                 return ResponseEntity.ok(pedidoService.buscaPorNumeroPedido(numeroPedido,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
@@ -68,13 +71,13 @@ public class PedidoController {
         }
 
         @GetMapping("/listarTodos")
-        public ResponseEntity<List<Pedido>> listar() {
+        public ResponseEntity<List<PedidoDTO>> listar() {
                 return ResponseEntity.ok(pedidoService.listar(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @GetMapping("/buscarPorId/{id}")
-        public ResponseEntity<Pedido> buscarPorId(@PathVariable Long id) {
+        public ResponseEntity<PedidoDTO> buscarPorId(@PathVariable Long id) {
                 return pedidoService.buscarPorId(id, usuarioLogadoService.getEmpresaIdLogada())
                                 .map(ResponseEntity::ok)
                                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -87,7 +90,7 @@ public class PedidoController {
         }
 
         @PostMapping("/buscarPorIds")
-        public ResponseEntity<List<Pedido>> buscarPorIds(@RequestBody Iterable<Long> ids) {
+        public ResponseEntity<List<PedidoDTO>> buscarPorIds(@RequestBody Iterable<Long> ids) {
                 return ResponseEntity.ok(pedidoService.buscarPorIds(ids,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
@@ -99,7 +102,7 @@ public class PedidoController {
         }
 
         @GetMapping("/paginado")
-        public ResponseEntity<Page<Pedido>> listarPaginado(
+        public ResponseEntity<Page<PedidoDTO>> listarPaginado(
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
                         @RequestParam(defaultValue = "id") String sort,
@@ -117,12 +120,14 @@ public class PedidoController {
                 return ResponseEntity.ok("Pedido deletado com sucesso.");
         }
 
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         @DeleteMapping("/deletarTodos")
         public ResponseEntity<Long> deleteAll() {
                 return ResponseEntity.ok(pedidoService.deleteAll(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         @DeleteMapping("/deletarTodosPorIds")
         public ResponseEntity<Void> deletarAllById(@RequestBody Iterable<Long> ids) {
                 pedidoService.deletarAllById(ids,

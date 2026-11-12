@@ -8,6 +8,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +24,7 @@ import br.com.jdeverp.pro.service.ClienteFuncionarioService;
 import br.com.jdeverp.pro.service.UsuarioLogadoService;
 import jakarta.validation.Valid;
 
+@PreAuthorize("isAuthenticated()")
 @RestController
 @RequestMapping("/api/clienteFuncionario")
 public class ClienteFuncionarioController {
@@ -51,7 +53,7 @@ public class ClienteFuncionarioController {
         }
 
         @GetMapping("/buscaPorNome/{nome}")
-        public ResponseEntity<List<ClienteFuncionario>> buscaPorNome(@PathVariable String nome) {
+        public ResponseEntity<List<ClienteFuncionarioDTO>> buscaPorNome(@PathVariable String nome) {
                 return ResponseEntity.ok(clienteFuncionarioService.buscaPorNome(nome,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
@@ -70,7 +72,7 @@ public class ClienteFuncionarioController {
         }
 
         @GetMapping("/buscarPorId/{id}")
-        public ResponseEntity<ClienteFuncionario> buscarPorId(@PathVariable Long id) {
+        public ResponseEntity<ClienteFuncionarioDTO> buscarPorId(@PathVariable Long id) {
                 return clienteFuncionarioService.buscarPorId(id, usuarioLogadoService.getEmpresaIdLogada())
                                 .map(ResponseEntity::ok)
                                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -83,13 +85,13 @@ public class ClienteFuncionarioController {
         }
 
         @GetMapping("/buscarPorPessoa/{idPessoa}")
-        public ResponseEntity<ClienteFuncionario> buscarPorPessoa(@PathVariable Long idPessoa) {
-                return ResponseEntity.ok(clienteFuncionarioService.findByPessoa(idPessoa,
+        public ResponseEntity<ClienteFuncionarioDTO> buscarPorPessoa(@PathVariable Long idPessoa) {
+                return ResponseEntity.ok(clienteFuncionarioService.findByPessoaDto(idPessoa,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
         @PostMapping("/buscarPorIds")
-        public ResponseEntity<List<ClienteFuncionario>> buscarPorIds(@RequestBody Iterable<Long> ids) {
+        public ResponseEntity<List<ClienteFuncionarioDTO>> buscarPorIds(@RequestBody Iterable<Long> ids) {
                 return ResponseEntity.ok(clienteFuncionarioService.buscarPorIds(ids,
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
@@ -101,7 +103,7 @@ public class ClienteFuncionarioController {
         }
 
         @GetMapping("/paginado")
-        public ResponseEntity<Page<ClienteFuncionario>> listarPaginado(
+        public ResponseEntity<Page<ClienteFuncionarioDTO>> listarPaginado(
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
                         @RequestParam(defaultValue = "id") String sort,
@@ -119,12 +121,14 @@ public class ClienteFuncionarioController {
                 return ResponseEntity.ok("Cliente funcionário deletado com sucesso.");
         }
 
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         @DeleteMapping("/deletarTodos")
         public ResponseEntity<Long> deleteAll() {
                 return ResponseEntity.ok(clienteFuncionarioService.deleteAll(
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         @DeleteMapping("/deletarTodosPorIds")
         public ResponseEntity<Void> deletarAllById(@RequestBody Iterable<Long> ids) {
                 clienteFuncionarioService.deletarAllById(ids,

@@ -20,5 +20,12 @@ paths:
 - **FK vinda do request:** valide num método privado `validarX(x, empresaId)` que exige o `id` e busca com `buscarPorId(id, empresaId)`. Exemplo: `ProdutoService.validarCategoria()`.
 - **Exclusão:** confira com `existsById(id, empresaId)` antes. Em lote, é tudo ou nada, como em `PessoaService.deletarAllById()`.
 - **Mensagens:** em português e específicas, ex.: "Produto não encontrado para a empresa logada."
-- **Transação:** método com mais de uma escrita usa `@Transactional` (`org.springframework.transaction.annotation`).
-- **DTO:** conversão num método privado `converterParaDto(...)`. Nunca copie a `senha`.
+- **Transação** (`org.springframework.transaction.annotation.Transactional`):
+  - O `spring.jpa.open-in-view` é `false`: a sessão do Hibernate só existe dentro da transação do service.
+  - A classe leva `@Transactional(readOnly = true)` e todo método que grava ou apaga leva `@Transactional`. Esquecer o `@Transactional` num método de escrita dá erro "read-only transaction" no PostgreSQL.
+  - Tudo que lê relacionamento LAZY (inclusive a conversão para DTO) fica dentro do método do service. Fora dele, dá `LazyInitializationException`.
+- **DTO:**
+  - Todo método chamado pelo controller devolve DTO. A conversão fica nos métodos privados `converterParaDto(X)` e `converterListaParaDto(List<X>)`; paginado usa `page.map(this::converterParaDto)`. Nunca copie a `senha`.
+  - Método usado por outro service continua devolvendo a entidade. Para o controller, crie a variante com sufixo `Dto`: `PessoaService.buscarPorId` / `buscarPorIdDto`, `RoleService.buscaPorAcesso` / `buscaPorAcessoDto`, `RoleUsuarioService.salvar` / `salvarDto`, `ClienteFuncionarioService.findByPessoa` / `findByPessoaDto`.
+  - Relacionamento vindo do request chega só com o `id`: troque pelo registro buscado no banco (`validarX`) antes de salvar, senão o DTO sai com o nome `null`.
+  - O usuário do `UsuarioLogadoService` é carregado no `JwtFilter`, fora da transação. Para pôr o nome dele no DTO, busque-o de novo (`validarUsuario(usuarioLogadoService.getUsuarioLogado(), empresaId)`, como em `ChamadoService.salvar`). Sem isso, dá `LazyInitializationException`.

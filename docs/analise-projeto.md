@@ -50,7 +50,7 @@ Ver `docs/arquitetura.md` §2 e §3: 6 módulos, 14 controllers e 202 endpoints.
     - desliga triggers e apaga plano, empresa e pessoa;
     - recria o CHECK `plano_valor_mensal_check`;
     - insere 2 planos, a empresa 1, 30 categorias, `ROLE_USER` e `ROLE_ADMIN`.
-- **Hikari e JPA:** pool de até 15 conexões, `auto-commit=false`, `open-in-view=true`.
+- **Hikari e JPA:** pool de até 15 conexões, `auto-commit=false`, `open-in-view=false` (desde 2026-11-11; ver `docs/arquitetura.md`, Transações).
 - **Banco local:** PostgreSQL 18, serviço `postgresql-x64-18`, porta 5433. Também existe um serviço `postgresql-9.5` (P5).
 
 ## 6. Segurança
@@ -62,10 +62,17 @@ Ver o `CLAUDE.md` (Convenções) e `.claude/rules/`.
 
 ## 8. Testes
 - **Existentes:**
-  - `contexto/TestContextoSpring`: classe base, com `@SpringBootTest`, `@AutoConfigureMockMvc(addFilters = false)`, `@Transactional` e `@TestPropertySource("classpath:application.properties")`;
-  - `repository/TestCategoriaRepository`: 7 testes próprios mais o herdado.
-- **Resultado:** `mvn -Dmaven.compiler.proc=full test` roda 9 testes em cerca de 17 s, com `BUILD SUCCESS` (2026-10-28).
-- **Banco:** os testes usam o banco dev real e o seed (empresa 1). Não há `src/test/resources`.
+  - `contexto/TestContextoSpring`: base dos testes de repository, com `@SpringBootTest`, `@AutoConfigureMockMvc(addFilters = false)`, `@Transactional` e `@TestPropertySource("classpath:application.properties")`;
+  - `contexto/TestContextoApi`: base dos testes de API (controllers e autenticação), com filtros ligados, login real, `open-in-view=false` e sem `@Transactional`. Cada classe cria e apaga a sua empresa de teste;
+  - `repository/TestCategoriaRepository`: 7 testes próprios mais o herdado;
+  - `controller/Test*Controller` (14 classes) e `security/TestJwtFilter`: cobrem os 202 endpoints e as respostas 401 do token;
+  - `service/Test*Service` (14 classes): unitários com Mockito das regras de isolamento por empresa, das checagens de `ROLE_ADMIN` e das regras alinhadas ao banco (plano FREE, data de cadastro);
+  - `security/TestPermissoesAdmin`: os 50 endpoints da área de administração com um usuário comum (403), incluindo a exclusão em lote. Também a consulta da própria empresa, a troca de senha e a ordenação;
+  - `service/TestSessaoHibernate`: services chamados direto, com sessão real e sem transação no teste. Confere que não há `LazyInitializationException` nos DTOs nem em `toString`/`equals`/`hashCode` das entidades fora da sessão;
+  - `security/TestIsolamentoExclusaoEmLote` e `repository/TestJpaJdevRepositoryImpl`: a exclusão em lote, mesmo feita pelo admin, não toca em registro de outra empresa;
+  - `model/TestEntidadeBase`, `model/TestPessoa` e `security/TestJwtFilterUnitario`: unitários, sem banco.
+- **Resultado:** `mvn -Dmaven.compiler.proc=full test` roda 367 testes em cerca de 40 s, com `BUILD SUCCESS` (2026-11-11, banco dev com o `V2_PESSOA_DOCUMENTO_POR_TIPO.sql`). Num banco sem o V2, `TestPessoaController.testSalvarDocumentoPorTipo` falha.
+- **Banco:** os testes usam o banco dev real. Os de repository usam o seed (empresa 1) e fazem rollback; os de API gravam numa empresa de teste e apagam tudo no final. Não há `src/test/resources`.
 
 ## 9. Comandos
 Ver `CLAUDE.md` (Comandos).
@@ -73,15 +80,15 @@ Ver `CLAUDE.md` (Comandos).
 ## 10. Pontos de atenção (dívidas registradas, não corrigidas)
 
 **Segurança e multiempresa**
-- **`CategoriaService.atualizar` sem checagem de empresa:** salva sem confirmar o id na empresa logada, então dá para sobrescrever a categoria de outra empresa.
-- **Injeção de JPQL:** `JpaJdevRepositoryImpl.listarPaginado` concatena o `sort` do request no `order by`.
-- **Escalada de privilégio:** `PlanoService`, `RoleService` e `RoleUsuarioService` não exigem admin, então qualquer usuário pode se dar `ROLE_ADMIN` (P10). O `UsuarioService.deleteAll` também não exige admin.
-- **`/api/admin/**` sem uso:** protegido no `SecurityConfig`, mas nenhuma rota usa esse prefixo. O `@EnableMethodSecurity` está ligado e não é usado.
+- **Injeção de JPQL:** resolvida em 2026-11-11. O `sort` da paginação só aceita o nome de um campo simples da entidade (`JpaJdevRepositoryImpl.validarCampoOrdenacao()`).
+- **Escalada de privilégio:** resolvida em 2026-11-11 (P9 e P10). A área de administração exige `ROLE_ADMIN` no controller (`@PreAuthorize`) e no service (`regras-negocio.md`, "Autorização da área de administração").
+- **Exclusão em lote:** resolvida em 2026-11-11 (P21). Os `deletarTodos` e `deletarTodosPorIds` são só de `ROLE_ADMIN` e, mesmo para o admin, só apagam na empresa logada; os deletes em lote do Spring Data sem empresa são bloqueados no `JpaJdevRepositoryImpl`.
+- **`/api/admin/**` sem uso:** protegido no `SecurityConfig`, mas nenhuma rota usa esse prefixo; a área admin é protegida por `@PreAuthorize`.
 - **CORS aberto:** `allowedOriginPattern("*")` com `allowCredentials=true`.
 - **Segredos expostos:**
   - em texto nos `.properties` e no histórico do git (`application.properties` até o commit `aed3214`);
   - há uma senha em comentário em `JDevERPPROApplication.configTimeZone()`.
-- **Erro no `JwtFilter`:** token inválido lança `MsgApiException` (400), e o filtro relança a exceção fora do `GlobalExceptionHandler` (P7).
+- **Erro no `JwtFilter`:** resolvido em 2026-11-11 (P7). Token recusado responde 401 com o motivo; erro inesperado, 500 pelo `GlobalExceptionHandler` (`arquitetura.md` §4).
 
 **Banco e configuração**
 - **`ddl-auto=update` em prod:** sem ferramenta de migration.
@@ -97,10 +104,8 @@ Ver `CLAUDE.md` (Comandos).
 - **Mensagens de erro:** os `server.error.include-*` estão comentados.
 
 **Código**
-- **Entidades expostas:** a maioria dos controllers recebe e devolve entidades JPA, o que abre espaço para mass assignment.
-- **Transações:**
-  - os services não usam `@Transactional`;
-  - os repositories usam `jakarta.transaction.Transactional`, não o do Spring.
+- **Entidades na entrada:** os controllers recebem entidades JPA (a saída já é DTO), o que abre espaço para mass assignment.
+- **Transações:** os repositories usam `jakarta.transaction.Transactional`, não o do Spring.
 - **Código morto e nomes enganosos:**
   - `EmpresaContext` é código morto;
   - `ConfiguracaoProducao` está anotada com `@Profile("dev")` e usa `System.out`.
@@ -108,10 +113,11 @@ Ver `CLAUDE.md` (Comandos).
   - `ConstraintViolationException` devolve 500, quando deveria ser 400;
   - criar devolve 200, não 201.
 - **Concorrência e log:**
-  - não há `@Version` nas entidades;
-  - o `JwtFilter` e o `JwtService` usam `printStackTrace()`.
-- **Bug no `EmpresaDTO`:** `EmpresaDTO.pessoaId` recebe o id do plano (em `EmpresaService`).
+  - não há `@Version` nas entidades.
+- **`toString()`/`equals()` das entidades:** resolvido em 2026-11-11. O `@Data` saiu, e as entidades estendem `model/EntidadeBase`.
+  - O `toString` lista só os campos simples, sem dados sensíveis.
+  - O `equals`/`hashCode` é pelo id e não carrega proxy LAZY.
 
 **Repositório**
-- **Módulos duplicados:** `-dev` e `-pro` são quase iguais e não têm POM pai (P2).
+- **Módulos duplicados:** `-dev` e `-pro` são quase iguais e não têm POM pai (P2). Toda mudança no `-dev` tem de ser copiada à mão para o `-pro`; a última vez foi em 2026-11-12, com o trabalho de 2026-11-11.
 - **Logs soltos:** `*.log` e `*.log.*.gz` são gerados na raiz do módulo. Desde a otimização, estão no `.gitignore` da raiz.
