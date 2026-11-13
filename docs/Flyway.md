@@ -29,6 +29,10 @@ A pasta antiga `src/main/webapp/db_sql_versionamento/` não existe mais. Os dois
 | `20261112.160000` | `V20261112_160000__criacao_estrutura_inicial.sql` | nova | Cria sequences, tabelas, PK, unique, check e FK. |
 | `20261112.161000` | `V20261112_161000__carga_inicial.sql` | `V1_INIT.sql` | Carga inicial: planos, empresa 1, admin, 30 categorias, roles. Também ajusta o CHECK do plano, a `unaccent` e as colunas do usuário. |
 | `20261112.162000` | `V20261112_162000__pessoa_documento_por_tipo.sql` | `V2_PESSOA_DOCUMENTO_POR_TIPO.sql` | CPF e CNPJ por tipo de pessoa e e-mail obrigatório (P13). |
+| `20261112.220600` | `V20261112_220600__empresa_bloqueio_obrigatorio.sql` | nova | `empresa.bloqueio`: nulo vira `false`, `DEFAULT false` e `NOT NULL` (regra 44a). |
+| `20261112.220700` | `V20261112_220700__usuario_liberado_obrigatorio.sql` | nova | `usuario.liberado`: nulo vira `false`, `DEFAULT false` e `NOT NULL` (regra 17a). |
+
+As duas últimas são as primeiras criadas depois da adoção do Flyway: rodam também nos bancos que recebem baseline.
 
 **Por que existe a migração de estrutura (nova):**
 - Antes, quem criava as tabelas era o Hibernate, e o `V1_INIT` rodava à mão depois.
@@ -38,7 +42,7 @@ A pasta antiga `src/main/webapp/db_sql_versionamento/` não existe mais. Os dois
   - `usuario.bloqueado` no lugar de `liberado`, porque o V1 insere em `bloqueado`, apaga a coluna e cria `liberado`;
   - sem o `plano_valor_mensal_check` e sem a `unaccent`, que o V1 cria;
   - sem os três CHECKs de pessoa, que o V2 cria.
-- Depois das três migrações, a estrutura fica igual à do banco dev (conferido por `pg_dump` e pelo teste `testMigrarProduzEstruturaDoBancoDev`).
+- Depois das três migrações iniciais, a estrutura ficou igual à do banco dev (conferido por `pg_dump` e pelo teste `testMigrarProduzEstruturaDoBancoDev`, que compara até a versão atual do dev).
 
 **O que mudou nos scripts antigos.** Só o necessário; os cabeçalhos `[Flyway]` de cada arquivo registram as mudanças.
 - **Carga inicial:**
@@ -138,7 +142,7 @@ psql -h localhost -p 5433 -U postgres -d jdev-erp-pro-dev -c "SELECT installed_r
 ## 7. Banco novo (vazio)
 1. O Flyway vê o schema `public` vazio. O log diz `All configured schemas are empty; baseline operation skipped`.
 2. Cria a `flyway_schema_history`.
-3. Aplica as três migrações, cada uma numa transação, e registra cada uma no histórico.
+3. Aplica todas as migrações, cada uma numa transação, e registra cada uma no histórico.
 4. O Hibernate sobe e não precisa criar nada.
 
 **Requisitos:**
@@ -175,8 +179,8 @@ Banco vazio não passa por essa conferência. Nas subidas seguintes também não
 ### Versões de baseline aceitas
 | Situação do banco | Versão | Efeito |
 |---|---|---|
-| `V1_INIT` e `V2` aplicados à mão (ex.: o dev) | `20261112.162000` (padrão) | Nada é executado. |
-| Só o `V1_INIT` aplicado (ex.: `jdev-erp-pro-prod` hoje) | `20261112.161000` | O Flyway aplica a `V20261112_162000` logo depois. |
+| `V1_INIT` e `V2` aplicados à mão (ex.: o dev) | `20261112.162000` (padrão) | Nenhum script antigo é executado; só as migrações posteriores (`220600` em diante). |
+| Só o `V1_INIT` aplicado (ex.: `jdev-erp-pro-prod` hoje) | `20261112.161000` | O Flyway aplica a `V20261112_162000` e as posteriores logo depois. |
 | Qualquer outra | — | Recusada. Abaixo, recriaria tabelas e rodaria a carga destrutiva; acima, pularia migrações sem conferir. |
 
 Para usar a `161000`, defina-a só na **primeira** subida desse banco:
@@ -203,6 +207,7 @@ Se houver diferença, resolva com uma migração nova depois do baseline, ou doc
 - **`jdev-erp-pro-dev`:**
   - Adotado: `BASELINE` em `20261112.162000`, gravado na primeira subida dos testes, depois da conferência.
   - Antes disso, o mesmo processo foi validado numa cópia integral do banco (estrutura e dados): nenhum dado ou objeto mudou.
+  - Depois, recebeu a `20261112.220600` e a `20261112.220700` (nenhum nulo a converter). Está na versão `20261112.220700`.
 - **`jdev-erp-pro-prod`:** não adotado (o `-pro` não tem Flyway). Diferenças encontradas no `pg_dump` (só leitura):
   - **sem o V2** (P13): precisa de baseline em `20261112.161000`;
   - **duas uniques a mais, sobras de versões antigas das entidades:**
@@ -210,6 +215,7 @@ Se houver diferença, resolva com uma migração nova depois do baseline, ou doc
     - `unique_inscricao_estadual` (duplicata da `unique_incricao_estadual`).
   - O baseline aceita essas sobras, porque não são o que os scripts antigos mudam, mas elas são uma divergência real: a `unique_sku` impede duas empresas de usarem o mesmo SKU. Decidir se saem por migração (P23).
   - Com o baseline padrão, uma cópia do prod foi recusada, como esperado: não subiu e nada foi gravado.
+  - Na adoção, as migrações `220600` e `220700` também rodam: empresa com `bloqueio` nulo passa a desbloqueada (`false`), e usuário com `liberado` nulo continua sem entrar (`false`).
 
 ## 9. Erro de checksum
 **Sintoma:** a aplicação não sobe com

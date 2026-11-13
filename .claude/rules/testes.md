@@ -8,8 +8,12 @@ paths:
 - **Service:** teste unitário, sem Spring.
   - Use `@ExtendWith(MockitoExtension.class)`, `@Mock` nos repositories e no `UsuarioLogadoService`, e `@InjectMocks` no service.
   - Cubra o caminho feliz e cada `MsgApiException` (mensagem e status), inclusive a regra de empresa.
-- **Repository com `@Query`:** estenda `contexto/TestContextoSpring` (`@SpringBootTest` + `@Transactional`, com rollback).
-  - Esses testes usam o banco dev real e o seed: empresa 1, via `empresaRepository.findById(1L)`.
+- **Service, cobertura:** todo método público e toda `MsgApiException` (inclusive relacionamento nulo e relacionamento sem id) têm teste. Hoje os testes unitários cobrem 100% das linhas e dos ramos dos services; mantenha.
+- **Repository com `@Query`:** estenda `contexto/TestContextoRepository`, que estende `contexto/TestContextoSpring` (`@SpringBootTest` + `@Transactional`, com rollback).
+  - Esses testes usam o banco dev real e o seed: empresa 1 (`EMPRESA_ID`).
+  - Crie os registros com as fábricas da base (`novaPessoa`, `novoUsuario`, `novoProduto`, `novoPedido`, `novoItem`, `novaMovimentacao`, `novoChamado`, `novaMensagem`) e nomes com `unico(...)`.
+  - Toda consulta por empresa é conferida também com `EMPRESA_INEXISTENTE`, que não pode devolver o registro.
+- **Enum gravado no banco:** `enums/TestEnumsNoBanco` compara os valores com o CHECK da coluna. Valor novo no enum precisa de migração que recrie o CHECK.
 - **Controller e autenticação:** estenda `contexto/TestContextoApi`, como em `controller/TestCategoriaController` e `security/TestJwtFilter`.
   - Fluxo real: filtros ligados, login de verdade (`POST /api/usuario/login`) e `spring.jpa.open-in-view=false`.
   - Sem `@Transactional` no teste, de propósito: uma transação do teste deixaria a sessão aberta e esconderia `LazyInitializationException`. As requisições gravam no banco dev.
@@ -17,9 +21,13 @@ paths:
   - Para isolamento, crie uma "outra empresa" com `criarEmpresa()` e `criarUsuario(nome, admin, empresaId)`. Para escrever SQL de preparação, use `executarSql(...)`: o pool está com `auto-commit=false`.
   - Métodos ordenados com `@Order`, um por endpoint. Todo endpoint novo precisa de teste.
   - Teste o acesso negado pela regra usada no endpoint (`isAdmin()` no service ou `@PreAuthorize`), com um usuário sem `ROLE_ADMIN` e `comToken(...)`.
+  - Endpoint `/paginado`: chame `conferirPaginado(url)` (valores padrão, as duas direções e ordenação inválida).
 - **Sessão do Hibernate:** `service/TestSessaoHibernate` chama os services direto, com o banco dev e sem transação no teste, autenticado como no `JwtFilter`.
   - Confere que nenhum DTO lê relacionamento LAZY fora da sessão do service, e que `toString`, `equals` e `hashCode` das entidades funcionam fora da sessão.
   - Service novo, ou DTO com relacionamento novo, ganha um teste ali.
 - **`JwtFilter`:** o fluxo real fica em `security/TestJwtFilter`; os caminhos que não dá para provocar de ponta a ponta (ex.: banco fora do ar) ficam em `security/TestJwtFilterUnitario`, com Mockito.
 - **Bibliotecas:** JUnit 5, Mockito, AssertJ, Spring Boot Test, MockMvc e spring-security-test, todas já disponíveis pelos starters. Não adicione dependências nem Testcontainers.
 - **Validação na subida:** o contexto valida todas as queries (`RepositoryEmpresaValidator`). Uma `@Query` sem `empresa.id` derruba todos os testes de integração.
+- **Cobertura:** meça sem mexer no `pom.xml`:
+  - `mvn -Dmaven.compiler.proc=full org.jacoco:jacoco-maven-plugin:0.8.14:prepare-agent test org.jacoco:jacoco-maven-plugin:0.8.14:report`
+  - O relatório sai em `target/site/jacoco/index.html`. Use a 0.8.14 ou mais nova: é a primeira com Java 25.

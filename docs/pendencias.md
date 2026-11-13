@@ -1,6 +1,6 @@
 # Pendências — decisões em aberto
 
-Esta é a lista única de dúvidas do projeto. Os outros documentos citam cada item pelo número (P1 a P24).
+Esta é a lista única de dúvidas do projeto. Os outros documentos citam cada item pelo número (P1 a P25).
 Quando uma pendência for respondida, registre a decisão aqui, atualize os arquivos afetados e marque o item como resolvido.
 
 O relatório da sessão de 2026-11-11 (DTOs, open-in-view, testes, JwtFilter, área admin e regras alinhadas ao banco) está em `docs/relatorios/relatorio-sessao-2026-11-11.pdf`.
@@ -144,6 +144,18 @@ Para o `Chamado`, todos os status da proposta existem. O `StatusChamado` tem mai
 - **`mvn package` / `spring-boot:run` (2026-11-12):** falhavam com "Unable to find main class" por causa da main de instância (`void main`).
   - A main passou a `public static void main`, porque o `JarLauncher` do Spring Boot 4.0.6 também só chama main estática.
   - O JAR é gerado e roda com `java -jar`.
+- **P25 — Proteção do administrador e `deletar-todos` de usuários (2026-11-12):** decidido e implementado.
+  - Usuário com `ROLE_ADMIN` nunca é apagado pela API, por ninguém. Para apagar, outro admin remove antes a `ROLE_ADMIN` dele.
+  - O admin logado não remove o próprio acesso: não se apaga, não se bloqueia (`liberado=false`), não remove nem altera as próprias associações em `RoleUsuario` e não renomeia nem apaga uma role que ele tem (ex.: `ROLE_ADMIN`). As recusas dizem o que fazer.
+  - `deletar-todos` apaga só os usuários que não são admin e solta antes o vínculo com `cliente_funcionario` (a falha por FK acabou).
+  - Complemento (2026-11-12):
+    - um admin não bloqueia outro (`liberado=false` ou nulo);
+    - o admin logado não apaga nem bloqueia a própria empresa;
+    - `ROLE_USER` e `ROLE_ADMIN` não podem ser renomeadas nem apagadas, por ninguém;
+    - `liberado` nulo vira `false` no cadastro e na edição de usuário, e `Usuario.isEnabled()` trata nulo como bloqueado;
+    - `bloqueio` nulo vira `false` no cadastro e na edição de empresa.
+  - Mantido de propósito: bloquear outra empresa, mesmo com admins, continua permitido (é como se corta um cliente do SaaS).
+  - Regras 17a, 27b, 31a a 31g e 44a de `docs/regras-negocio.md`. Testes: `TestUsuarioService`, `TestRoleService`, `TestRoleUsuarioService`, `TestEmpresaService`, `TestUsuario`, `TestUsuarioController`, `TestRoleController`, `TestRoleUsuarioController`, `TestEmpresaController`.
 - **P4 — execução do `V1_INIT.sql` (2026-11-12):** resolvida pela adoção do Flyway.
   - O script virou a migração `V20261112_161000__carga_inicial.sql` e roda sozinho, só em banco novo.
   - Uma trava recusa a execução se `plano`, `empresa` ou `pessoa` tiverem dados.

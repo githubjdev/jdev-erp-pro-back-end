@@ -10,7 +10,7 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 3. **Métodos sem empresa são bloqueados.** `findAll()`, `findById()`, `count()`, `deleteById(id)` e similares lançam exceção em entidades com empresa — `JpaJdevRepositoryImpl.validar()`.
 4. **Excluir por id exige que o registro exista na empresa logada.** Caso contrário: "... não encontrado ou já foi deletado" — `deleteById()` de todos os services.
 5. **A exclusão em lote é tudo ou nada.** Se algum id não existir na empresa, nada é apagado e a mensagem lista os ids não encontrados. Uma lista vazia também é recusada. — `deletarAllById()` em `PessoaService`, `ProdutoService`, `ClienteFuncionarioService`, `PedidoService`, `ItemPedidoService`, `MovimentacaoProdutoService`, `MensagemService` e `UsuarioService`.
-6. **"Apagar todos" apaga todos os registros da empresa logada.** Exige que exista pelo menos um registro — `deleteAll(empresaId)` nos mesmos 8 services.
+6. **"Apagar todos" apaga todos os registros da empresa logada.** Exige que exista pelo menos um registro — `deleteAll(empresaId)` nos mesmos 8 services. Exceção: em usuários, os admins ficam (regra 31c).
 6a. **A exclusão em lote nunca sai da empresa logada, nem para o admin.** O delete sempre leva `empresa.id = :empresaId`, com a empresa do token. Entidade global ou empresa nula é recusada, e os deletes em lote do Spring Data sem empresa são bloqueados — `JpaJdevRepositoryImpl.validarExclusaoEmLote()` e `validar()`.
 7. **Exclusão em lote (`deletarTodos`, `deletarTodosPorIds`) é só de `ROLE_ADMIN`** (403 "Apenas administradores podem excluir registros em lote.") — `@PreAuthorize` nos controllers e `exigirAdminParaExclusaoEmLote()` nos services (P21). A exclusão dos filhos de um registro (`deletarPorPedido`, `deletarPorChamado`, `deletarTodosPorChamado`) continua aberta.
 7. **Nomes são comparados de forma tolerante.** Comparações de nome, título e número (unicidade e busca) ignoram acento, maiúsculas e espaços nas pontas — `@Query` com `unaccent(upper(trim(...)))` nos repositories.
@@ -20,7 +20,7 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 **Login e sessão**
 1. O login localiza o usuário só pelo login, sem considerar empresa — `UsuarioService.login()`, `UsuarioRepository.buscaPorLogin()` (`@IgnoreEmpresaId`).
 2. Login inexistente é recusado com 401 — `UsuarioService.login()`.
-3. Usuário com `liberado=false` não entra (401) — `UsuarioService.login()`, `UsuarioDetailsService.loadUserByUsername()`.
+3. Usuário com `liberado=false` não entra (401) — `UsuarioService.login()`, `UsuarioDetailsService.loadUserByUsername()`. `liberado` nulo conta como bloqueado — `Usuario.isEnabled()` (antes dava `NullPointerException`).
 4. Empresa com `bloqueio=true` impede o login de todos os seus usuários (401) — `UsuarioService.login()`, `UsuarioDetailsService.loadUserByUsername()`.
 5. Senha errada é recusada (401). A conferência usa BCrypt — `UsuarioService.login()`.
 6. O token JWT vale `jwt.expiration` (24h) e carrega `usuarioId`, `empresaId` e `login` — `JwtService.gerarToken()`.
@@ -35,7 +35,7 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 10. Login não pode repetir:
     - o service verifica dentro da empresa logada — `UsuarioService.salvar()` (`existePorLogin`);
     - no banco, a unicidade é global — `Usuario` (`unique_login`).
-11. A senha precisa ter pelo menos 5 caracteres. O código recusa `< 5`, mas a mensagem diz "mais de 5" — `UsuarioService.salvar()`.
+11. A senha precisa ter pelo menos 5 caracteres ("A senha deve ter no mínimo 5 caracteres.") — `UsuarioService.salvar()`.
 12. Cada pessoa tem no máximo um usuário:
     - `UsuarioService.salvar()` (`existePorPessoa`);
     - `UsuarioService.atualizar()` (`existeOutroUsuarioComPessoa`).
@@ -46,10 +46,11 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
 15. Todo usuário novo recebe `ROLE_USER` — `UsuarioService.salvar()`.
 16. Ao criar o usuário, o `ClienteFuncionario` recebe o vínculo de volta (`clienteFuncionario.usuario`) — `UsuarioService.salvar()`.
 17. Editar o usuário não altera a senha — `UsuarioService.atualizar()`.
+17a. `liberado` nulo vira `false` ao cadastrar e ao editar: liberar o usuário é decisão explícita do admin — `UsuarioService.salvar()`, `atualizar()` (2026-11-12). Sem o campo no JSON, o padrão do `UsuarioDto` continua `true`.
 18. A senha nunca volta na resposta:
     - `UsuarioService.salvar()` e `atualizar()` mascaram com `***Ocultada***`;
     - os campos sensíveis de `Usuario` têm `@JsonIgnore`.
-19. Ao excluir um usuário, ele é desvinculado do `ClienteFuncionario` antes — `UsuarioService.deleteById()` (`removeUserClienteFuncionarioId`).
+19. Ao excluir um usuário, ele é desvinculado do `ClienteFuncionario` antes — `UsuarioService.deleteById()`, `deleteAll()` e `deletarAllById()` (`removeUserClienteFuncionarioId`).
 20. Login e senha são obrigatórios, e o hash da senha é único no banco — `Usuario` (`@NotBlank`, `unique_senha`).
 
 **Troca de senha** — `UsuarioService.alterarSenha()`
@@ -65,6 +66,8 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
     - `RoleService.salvar()` (`existePorAcesso`);
     - `RoleService.atualizar()` (`existePorAcessoDiferenteId`);
     - `Role` (`unique_acesso`).
+27a. A edição altera o registro do banco: id que não existe é recusado ("Acesso com id: X não foi encontrado.") e não cria outro acesso — `RoleService.atualizar()` (2026-11-12).
+27b. `ROLE_USER` e `ROLE_ADMIN` são acessos do sistema e não podem ser renomeados nem apagados, por ninguém (400 "O acesso ROLE_USER é do sistema e não pode ser renomeado: o cadastro de usuários e a identificação do administrador dependem desse nome. Para usar outro nome, cadastre um acesso novo."; na exclusão, "…não pode ser apagado: … Para tirá-lo de um usuário, remova a associação em Acessos do usuário.") — `RoleService.atualizar()`, `deleteById()` (`ACESSOS_DO_SISTEMA`). O cadastro de usuário procura a `ROLE_USER` pelo nome (regra 15), e o admin é reconhecido pela `ROLE_ADMIN` (regra 28). Salvar com o mesmo nome continua permitido.
 28. É admin quem tem `ROLE_ADMIN`. O admin é global, sem vínculo a uma empresa — `Usuario.idAdmin()`, `UsuarioLogadoService.isAdmin()`.
 
 **Atribuição de roles (`/api/roleUsuario`)** — todo o endpoint é só de `ROLE_ADMIN` (403): `@PreAuthorize` em `RoleUsuarioController`; `RoleUsuarioService.salvar()`, `atualizar()`, `deleteById()` e `deleteByUsuarioAndRole()` também conferem.
@@ -74,6 +77,16 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
     - `RoleUsuarioService.atualizar()` (`existePorUsuarioDiferenreId`);
     - `RoleUsuario` (`unique_role_user`).
 31. Só é possível excluir atribuições de usuários da empresa logada — `RoleUsuarioService.deleteById()` (`buscarPorIdEEmpresa`).
+
+**Proteção do administrador (P25, decidida em 2026-11-12)** — as recusas trazem a instrução do que fazer.
+31a. Usuário com `ROLE_ADMIN` nunca é apagado pela API, por ninguém (400 "Usuário administrador não pode ser apagado. Para apagá-lo, remova antes o acesso ROLE_ADMIN dele em Acessos do usuário e tente de novo.") — `UsuarioService.deleteById()`; em lote, `deletarAllById()` recusa a lista inteira.
+31b. O admin logado não apaga o próprio usuário (403 "Você não pode apagar o seu próprio usuário…") nem se bloqueia com `liberado=false` ou nulo (403 "Você não pode bloquear o seu próprio usuário…") — `UsuarioService.deleteById()`, `deletarAllById()`, `atualizar()`. Editar os próprios dados sem se bloquear continua permitido.
+31b1. Um admin não bloqueia outro admin (400 "Usuário administrador não pode ser bloqueado por outro administrador. Para bloqueá-lo, remova antes o acesso ROLE_ADMIN dele em Acessos do usuário e tente de novo.") — `UsuarioService.atualizar()`. Editar os dados de outro admin sem bloqueá-lo continua permitido, e um admin que já estava bloqueado pode ser editado e continuar bloqueado.
+31c. "Apagar todos" de usuários (`DELETE /api/usuario/deletar-todos`) apaga só quem não é admin: o admin logado e os outros admins ficam. Antes, solta o vínculo dos cadastros de cliente/funcionário. Só com admins na empresa, responde 400 "Nenhum usuário para deletar…" — `UsuarioService.deleteAll()`.
+31d. O admin logado não remove nem altera os próprios acessos (403 "Você não pode remover ou alterar os seus próprios acessos…; peça a outro administrador") — `RoleUsuarioService.atualizar()`, `deleteById()`, `deleteByUsuarioAndRole()`. Dar acesso a si mesmo continua permitido.
+31e. O admin logado não renomeia nem apaga um acesso que ele mesmo tem, como a `ROLE_ADMIN` (403, com a instrução de cadastrar um acesso novo ou pedir a outro administrador) — `RoleService.atualizar()`, `deleteById()`, via `UsuarioLogadoService.possuiAcesso()`. Para `ROLE_USER` e `ROLE_ADMIN`, a renomeação e a exclusão já são recusadas antes pela regra 27b.
+31f. O admin logado não apaga a própria empresa (403 "Você não pode apagar a sua própria empresa: você e os usuários dela perderiam o acesso ao sistema. Se ela precisar mesmo ser apagada, peça a um administrador de outra empresa.") — `EmpresaService.deleteById()`.
+31g. O admin logado não bloqueia a própria empresa com `bloqueio=true` (403 "Você não pode bloquear a sua própria empresa: … Se ela precisar mesmo ser bloqueada, peça a um administrador de outra empresa.") — `EmpresaService.atualizar()`. Editar a própria empresa sem bloqueá-la continua permitido. Bloquear outra empresa continua permitido, mesmo que ela tenha admins: é como se corta um cliente do SaaS (decidido em 2026-11-12).
 
 ## 2. SaaS: planos e empresas (`Plano`, `Empresa`)
 
@@ -89,7 +102,7 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
     - "Plano Pro": PRO, R$ 50, 30 usuários, 15 clientes.
 
 **Empresa (global)**
-39. Só `ROLE_ADMIN` cadastra, edita, exclui, lista e pesquisa empresas (403) — `@PreAuthorize` em `EmpresaController` e `EmpresaService`. O usuário comum consulta só a própria empresa (`buscarPorId`); outra empresa dá 403 "Apenas administradores podem consultar outras empresas.". No `salvar()`, a permissão é conferida antes de tudo.
+39. Só `ROLE_ADMIN` cadastra, edita, exclui, lista e pesquisa empresas (403) — `@PreAuthorize` em `EmpresaController` e `EmpresaService`. O usuário comum consulta só a própria empresa (`buscarPorId`); outra empresa dá 403 "Apenas administradores podem consultar outras empresas.". No `salvar()`, a permissão é conferida antes de tudo. O admin não apaga nem bloqueia a própria empresa (regras 31f e 31g).
 40. Cada pessoa pode ter no máximo uma empresa:
     - `EmpresaService.salvar()` (`existePorPessoa`);
     - `Empresa` (`unique_pessoa_empresa`).
@@ -101,6 +114,7 @@ Formato: regra — onde está implementada. As classes ficam em `br.com.jdeverp.
     - `planoAtivo=false`;
     - `bloqueio=false`.
 44. `bloqueio=true` bloqueia login e uso de todos os usuários da empresa (ver regras 4 e 8).
+44a. `bloqueio` nulo vira `false` ao cadastrar e ao editar — `EmpresaService.salvar()`, `atualizar()` (2026-11-12).
 
 ## 3. Cadastros (`Pessoa`, `ClienteFuncionario`)
 

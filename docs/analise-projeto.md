@@ -72,11 +72,14 @@ Ver o `CLAUDE.md` (Convenções) e `.claude/rules/`.
 
 ## 8. Testes
 - **Existentes:**
-  - `contexto/TestContextoSpring`: base dos testes de repository, com `@SpringBootTest`, `@AutoConfigureMockMvc(addFilters = false)`, `@Transactional` e `@TestPropertySource("classpath:application.properties")`;
-  - `contexto/TestContextoApi`: base dos testes de API (controllers e autenticação), com filtros ligados, login real, `open-in-view=false` e sem `@Transactional`. Cada classe cria e apaga a sua empresa de teste;
-  - `repository/TestCategoriaRepository`: 7 testes próprios mais o herdado;
+  - `contexto/TestContextoSpring`: base dos testes com Spring e rollback, com `@SpringBootTest`, `@AutoConfigureMockMvc(addFilters = false)`, `@Transactional` e `@TestPropertySource("classpath:application.properties")`;
+  - `contexto/TestContextoRepository` (desde 2026-11-12): estende a anterior, com fábricas de registros na empresa 1 e `EMPRESA_INEXISTENTE` para conferir o filtro por empresa;
+  - `contexto/TestContextoApi`: base dos testes de API (controllers e autenticação), com filtros ligados, login real, `open-in-view=false` e sem `@Transactional`. Cada classe cria e apaga a sua empresa de teste. `conferirPaginado(url)` testa os `/paginado`;
+  - `repository/Test*Repository` (15 classes): cada `@Query` de cada repository, com o caso positivo e a mesma consulta em outra empresa. `TestJpaJdevRepositoryImpl` cobre a base: paginação, ordenação inválida, total, busca por id e ids, os métodos do Spring Data bloqueados em entidade com empresa e liberados em entidade global;
   - `controller/Test*Controller` (14 classes) e `security/TestJwtFilter`: cobrem os 202 endpoints e as respostas 401 do token;
-  - `service/Test*Service` (14 classes): unitários com Mockito das regras de isolamento por empresa, das checagens de `ROLE_ADMIN` e das regras alinhadas ao banco (plano FREE, data de cadastro);
+  - `service/Test*Service` (17 classes): unitários com Mockito de todos os métodos públicos e de todas as `MsgApiException`. Sozinhos, cobrem 100% das linhas e dos ramos dos services;
+  - unitários de apoio: `exception/TestGlobalExceptionHandler`, `util/TestExceptionUtil`, `util/TestObjectMapperUtil`, `util/TestDtoUtil`, `security/TestJwtAccessDeniedHandler`, `security/TestUsuarioAutenticado`, `model/TestUsuario`, `model/TestRole`, `enums/TestEnums` e `validator/TestRepositoryEmpresaValidator`;
+  - `enums/TestEnumsNoBanco`: os valores de cada enum iguais aos do CHECK da coluna no banco;
   - `security/TestPermissoesAdmin`: os 50 endpoints da área de administração com um usuário comum (403), incluindo a exclusão em lote. Também a consulta da própria empresa, a troca de senha e a ordenação;
   - `service/TestSessaoHibernate`: services chamados direto, com sessão real e sem transação no teste. Confere que não há `LazyInitializationException` nos DTOs nem em `toString`/`equals`/`hashCode` das entidades fora da sessão;
   - `security/TestIsolamentoExclusaoEmLote` e `repository/TestJpaJdevRepositoryImpl`: a exclusão em lote, mesmo feita pelo admin, não toca em registro de outra empresa;
@@ -86,7 +89,10 @@ Ver o `CLAUDE.md` (Convenções) e `.claude/rules/`.
     - `config/TestVerificacaoBaselineFlyway`: baseline em banco existente e as recusas;
     - `app/TestJDevERPPROApplication`: a aplicação inteira subindo em banco vazio, existente e divergente, duas vezes, e com migração inválida.
     - Detalhes em `docs/Flyway.md` §14.
-- **Resultado:** `mvn -Dmaven.compiler.proc=full test` roda 387 testes em cerca de 1 min 30 s, com `BUILD SUCCESS` (2026-11-12).
+- **Resultado:** `mvn -Dmaven.compiler.proc=full test` roda 1038 testes em cerca de 1 min 30 s, com `BUILD SUCCESS` (2026-11-12).
+- **Cobertura (JaCoCo 0.8.14 pela linha de comando, comando em `.claude/rules/testes.md`):**
+  - 99,5% das linhas e 100% dos ramos (antes, em 2026-11-12: 86,9% e 72,9%).
+  - Fora: a `main` (validada pelo `java -jar`), o `EmpresaContext` (código morto), os construtores implícitos das classes utilitárias, e o `deleteAll()`/`deleteAllInBatch()` sem filtro em entidade global, que apagariam todos os planos ou roles.
 - **Banco:**
   - Os testes usam o banco dev real. Os de repository usam o seed (empresa 1) e fazem rollback; os de API gravam numa empresa de teste e apagam tudo no final.
   - Os do Flyway usam bancos temporários.
@@ -136,6 +142,14 @@ Ver `CLAUDE.md` (Comandos).
 - **`toString()`/`equals()` das entidades:** resolvido em 2026-11-11. O `@Data` saiu, e as entidades estendem `model/EntidadeBase`.
   - O `toString` lista só os campos simples, sem dados sensíveis.
   - O `equals`/`hashCode` é pelo id e não carrega proxy LAZY.
+- **Achados dos testes de 2026-11-12:**
+  - `ExceptionUtil.getMensagemAmigavel` usava a mensagem do banco como formato do `String.format`: um `%` no valor de uma unique (ex.: "50% off") virava 500. **Corrigido** (concatenação) e coberto por `TestExceptionUtil`.
+  - `UsuarioService.deleteAll` (`DELETE /api/usuario/deletar-todos`) não soltava o `cliente_funcionario.usuario_id` e apagaria o admin logado. **Resolvido** com a decisão da P25 (`regras-negocio.md`, regras 31a a 31e).
+  - `UsuarioService.salvar` respondia "A senha deve ter mais de 5 caracteres." mas aceita exatamente 5. **Corrigida a mensagem**: "A senha deve ter no mínimo 5 caracteres."
+  - `RoleService.atualizar` gravava o objeto do request sem conferir se o acesso existia (um id inexistente criaria outro acesso). **Corrigido**: edita o registro do banco ou recusa.
+  - `RepositoryEmpresaValidator` não exige o `motivo` do `@IgnoreEmpresaId` nem respeita `ignorar = false`. **Decidido manter** (2026-11-12): a anotação só serve para pular a conferência do `empresa.id`; o `motivo` é convenção, não é validado.
+  - `ObjectMapperUtil` é um bean singleton com estado mutável (`parser`) em `jsonParaHashMap`/`valorAtributo`. Hoje nenhum código de produção usa esses métodos. **Decidido** (2026-11-12): onde o código precisar de um ObjectMapper, use o bean `ObjectMapperUtil` (convenção no `CLAUDE.md`).
+  - `TipoPessoa.FISICA` tinha a descrição "Fisíca". **Corrigido** para "Física".
 
 **Repositório**
 - **Módulos duplicados:** `-dev` e `-pro` são quase iguais e não têm POM pai (P2). Toda mudança no `-dev` tem de ser copiada à mão para o `-pro`; a última vez foi em 2026-11-12, com o trabalho de 2026-11-11.

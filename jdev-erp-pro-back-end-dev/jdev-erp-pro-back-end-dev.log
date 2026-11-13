@@ -30,3 +30,14 @@
 2026-11-12 17:14:59.058 [http-nio-8081-exec-4] INFO  o.a.c.c.C.[.[.[/jdev-erp-pro-back-end-dev] - Initializing Spring DispatcherServlet 'dispatcherServlet'
 2026-11-12 17:14:59.058 [http-nio-8081-exec-4] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
 2026-11-12 17:14:59.061 [http-nio-8081-exec-4] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 3 ms
+2026-11-12 22:26:34.360 [main] INFO  b.c.j.pro.app.JDevERPPROApplication - Starting JDevERPPROApplication using Java 25.0.3 with PID 24840 (C:\Users\alex_\git\jdev-erp-pro-back-end\jdev-erp-pro-back-end-dev\target\classes started by alex_ in C:\Users\alex_\git\jdev-erp-pro-back-end\jdev-erp-pro-back-end-dev)
+2026-11-12 22:26:34.364 [main] INFO  b.c.j.pro.app.JDevERPPROApplication - The following 1 profile is active: "dev"
+2026-11-12 22:26:36.484 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-11-12 22:26:36.485 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/11.0.21]
+2026-11-12 22:26:37.000 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool - Starting...
+2026-11-12 22:26:37.241 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool - Start completed.
+2026-11-12 22:26:37.277 [main] INFO  org.flywaydb.core.FlywayExecutor - Database: jdbc:postgresql://localhost:5433/jdev-erp-pro-dev?reWriteBatchedInserts=true&autoreconnect=true (PostgreSQL 18.1)
+2026-11-12 22:26:37.358 [main] INFO  o.f.core.internal.command.DbValidate - Successfully validated 6 migrations (execution time 00:00.043s)
+2026-11-12 22:26:37.504 [main] INFO  o.f.core.internal.command.DbMigrate - Current version of schema "public": 20261112.220700
+2026-11-12 22:26:37.508 [main] INFO  o.f.core.internal.command.DbMigrate - Schema "public" is up to date. No migration necessary.
+2026-11-12 22:26:42.590 [main] INFO  b.c.j.pro.app.JDevERPPROApplication - Started JDevERPPROApplication in 8.765 seconds (process running for 9.231)
