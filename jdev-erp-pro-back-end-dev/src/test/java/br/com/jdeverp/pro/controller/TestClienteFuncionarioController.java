@@ -165,4 +165,11 @@ public class TestClienteFuncionarioController extends TestContextoApi {
 		get("/api/clienteFuncionario/existePorId/{id}", admin.clienteFuncionarioId()).andExpect(jsonPath("$").value(true));
 	}
 
+
+	@Test
+	@Order(100)
+	public void testListarPaginado() throws Exception {
+		conferirPaginado("/api/clienteFuncionario/paginado");
+	}
+
 }

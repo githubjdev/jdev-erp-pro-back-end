@@ -212,4 +212,11 @@ public class TestMensagemController extends TestContextoApi {
 		delete("/api/mensagem/deletarTodos").andExpect(status().isBadRequest());
 	}
 
+
+	@Test
+	@Order(100)
+	public void testListarPaginado() throws Exception {
+		conferirPaginado("/api/mensagem/paginado");
+	}
+
 }

@@ -205,4 +205,11 @@ public class TestPessoaController extends TestContextoApi {
 		get("/api/pessoa/total").andExpect(jsonPath("$").value(antes));
 	}
 
+
+	@Test
+	@Order(100)
+	public void testListarPaginado() throws Exception {
+		conferirPaginado("/api/pessoa/paginado");
+	}
+
 }

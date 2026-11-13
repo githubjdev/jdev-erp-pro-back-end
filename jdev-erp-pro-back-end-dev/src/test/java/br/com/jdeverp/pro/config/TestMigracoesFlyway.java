@@ -42,7 +42,11 @@ import br.com.jdeverp.pro.contexto.BancoTemporarioTeste;
  */
 public class TestMigracoesFlyway {
 
-	static final List<String> VERSOES = List.of("20261112.160000", "20261112.161000", "20261112.162000");
+	static final List<String> VERSOES = List.of("20261112.160000", "20261112.161000", "20261112.162000", "20261112.220600",
+			"20261112.220700");
+
+	/** Migrações criadas depois da adoção do Flyway: rodam também sobre o banco que recebeu baseline. */
+	static final List<String> VERSOES_POSTERIORES_AO_BASELINE = VERSOES.subList(3, VERSOES.size());
 
 	private static final String LOCAL_NOVA = "classpath:db/migracao-teste/nova";
 
@@ -60,7 +64,7 @@ public class TestMigracoesFlyway {
 			assertTrue(resultado.success);
 			assertEquals(VERSOES.size(), resultado.migrationsExecuted);
 			assertEquals(0, flyway.info().pending().length);
-			assertEquals("20261112.162000", flyway.info().current().getVersion().getVersion());
+			assertEquals(VERSOES.getLast(), flyway.info().current().getVersion().getVersion());
 
 			List<String> versoes = new ArrayList<>();
 			for (MigrationInfo info : flyway.info().applied()) {
@@ -85,6 +89,12 @@ public class TestMigracoesFlyway {
 			assertEquals(3, banco.contar("""
 					SELECT count(*) FROM pg_constraint
 					 WHERE conname IN ('pessoa_cpf_pessoa_fisica_check', 'pessoa_cnpj_pessoa_juridica_check', 'pessoa_email_preenchido_check')"""));
+			/* V20261112_220600 e V20261112_220700: bloqueio e liberado obrigatórios, com padrão false */
+			assertEquals(List.of("bloqueio|NO|false", "liberado|NO|false"), banco.consultar("""
+					SELECT column_name || '|' || is_nullable || '|' || column_default FROM information_schema.columns
+					 WHERE table_schema = 'public'
+					   AND ((table_name = 'empresa' AND column_name = 'bloqueio') OR (table_name = 'usuario' AND column_name = 'liberado'))
+					 ORDER BY column_name"""));
 		}
 	}
 
@@ -234,7 +244,10 @@ public class TestMigracoesFlyway {
 		}
 
 		assertTrue(nomes.containsAll(List.of("V20261112_160000__criacao_estrutura_inicial.sql",
-				"V20261112_161000__carga_inicial.sql", "V20261112_162000__pessoa_documento_por_tipo.sql")), nomes.toString());
+				"V20261112_161000__carga_inicial.sql", "V20261112_162000__pessoa_documento_por_tipo.sql",
+				"V20261112_220600__empresa_bloqueio_obrigatorio.sql", "V20261112_220700__usuario_liberado_obrigatorio.sql")),
+				nomes.toString());
+		assertEquals(VERSOES.size(), nomes.size(), "Migração nova? Inclua a versão em VERSOES: " + nomes);
 	}
 
 	/** Versão atual de um banco pelo Flyway; sem histórico, a versão de baseline padrão. */

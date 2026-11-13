@@ -167,4 +167,53 @@ public class TestJwtFilterUnitario {
 		assertNull(SecurityContextHolder.getContext().getAuthentication());
 	}
 
+	@Test
+	public void testDoFilterInternalCabecalhoSemBearer() throws Exception {
+		request.addHeader("Authorization", "Basic " + TOKEN);
+
+		jwtFilter.doFilter(request, response, filterChain);
+
+		/* Outro esquema de autenticação: segue sem token, o Spring Security decide */
+		verify(filterChain).doFilter(request, response);
+		verifyNoInteractions(jwtService, usuarioDetailsService);
+		assertNull(request.getAttribute(JwtFilter.ATRIBUTO_MOTIVO_RECUSA));
+	}
+
+	@Test
+	public void testDoFilterInternalTokenEmBranco() throws Exception {
+		request.addHeader("Authorization", "Bearer    ");
+
+		jwtFilter.doFilter(request, response, filterChain);
+
+		verify(filterChain).doFilter(request, response);
+		verifyNoInteractions(jwtService, usuarioDetailsService);
+	}
+
+	@Test
+	public void testDoFilterInternalJaAutenticado() throws Exception {
+		comToken();
+		Authentication existente = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken("outro", "x");
+		SecurityContextHolder.getContext().setAuthentication(existente);
+
+		jwtFilter.doFilter(request, response, filterChain);
+
+		/* Autenticação já feita nesta requisição: não valida o token de novo */
+		verifyNoInteractions(jwtService, usuarioDetailsService);
+		verify(filterChain).doFilter(request, response);
+		assertEquals(existente, SecurityContextHolder.getContext().getAuthentication());
+	}
+
+	@Test
+	public void testDoFilterInternalTokenSemLogin() throws Exception {
+		comToken();
+		when(jwtService.extrairLogin(TOKEN)).thenReturn(null);
+
+		jwtFilter.doFilter(request, response, filterChain);
+
+		verify(filterChain).doFilter(request, response);
+		assertEquals(JwtFilter.MSG_TOKEN_INVALIDO, request.getAttribute(JwtFilter.ATRIBUTO_MOTIVO_RECUSA));
+		verifyNoInteractions(usuarioDetailsService);
+		assertNull(SecurityContextHolder.getContext().getAuthentication());
+	}
+
 }

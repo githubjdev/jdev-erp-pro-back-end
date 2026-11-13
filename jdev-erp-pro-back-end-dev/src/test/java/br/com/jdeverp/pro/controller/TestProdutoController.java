@@ -189,4 +189,11 @@ public class TestProdutoController extends TestContextoApi {
 		delete("/api/produto/deletarTodos").andExpect(status().isBadRequest());
 	}
 
+
+	@Test
+	@Order(100)
+	public void testListarPaginado() throws Exception {
+		conferirPaginado("/api/produto/paginado");
+	}
+
 }

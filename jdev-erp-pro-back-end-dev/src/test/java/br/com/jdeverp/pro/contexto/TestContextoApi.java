@@ -1,6 +1,7 @@
 package br.com.jdeverp.pro.contexto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
@@ -381,6 +382,19 @@ public abstract class TestContextoApi {
 			mapa.put((String) chaveValor[i], chaveValor[i + 1]);
 		}
 		return mapa;
+	}
+
+	/**
+	 * Endpoint {@code /paginado}: valores padrão, as duas direções (asc e
+	 * qualquer outra, que vira desc) e campo de ordenação inválido. O {@code sort}
+	 * vai para o JPQL e só aceita atributo simples da entidade.
+	 */
+	protected void conferirPaginado(String url) throws Exception {
+		get(url).andExpect(status().isOk());
+		get(url + "?page=0&size=2&sort=id&direction=ASC").andExpect(status().isOk());
+		get(url + "?page=0&size=2&sort=id&direction=desc").andExpect(status().isOk());
+		get(url + "?sort=empresa").andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Campo de ordenação inválido."));
 	}
 
 	/** Referência a outra entidade no JSON: {"id": x}. */

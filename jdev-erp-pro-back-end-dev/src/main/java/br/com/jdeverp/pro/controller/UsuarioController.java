@@ -187,7 +187,7 @@ public class UsuarioController {
 		
 		long deletados = usuarioService.deleteAll(usuarioLogadoService.getEmpresaIdLogada());
 		
-		return ResponseEntity.ok("Total de " + deletados + " usuários deletados com sucesso!");
+		return ResponseEntity.ok("Total de " + deletados + " usuários deletados com sucesso! Os administradores foram mantidos.");
 	}
 	
 }

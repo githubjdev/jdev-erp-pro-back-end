@@ -57,14 +57,14 @@ public class TestJDevERPPROApplication {
 	public void testMainBancoVazio() {
 		try (ConfigurableApplicationContext contexto = subir(banco)) {
 			Flyway flyway = contexto.getBean(Flyway.class);
-			assertEquals(3, flyway.info().applied().length);
+			assertEquals(5, flyway.info().applied().length);
 			assertEquals(0, flyway.info().pending().length);
-			assertEquals("20261112.162000", flyway.info().current().getVersion().getVersion());
+			assertEquals("20261112.220700", flyway.info().current().getVersion().getVersion());
 		}
 
 		historico = banco.historicoFlyway();
 		estrutura = banco.estrutura();
-		assertEquals(3, historico.size());
+		assertEquals(5, historico.size());
 
 		try (BancoTemporarioTeste soFlyway = BancoTemporarioTeste.criar("so_flyway")) {
 			soFlyway.flyway().migrate();
@@ -99,23 +99,27 @@ public class TestJDevERPPROApplication {
 		assertFalse(banco.existeTabela("flyway_teste_migracao_invalida"));
 	}
 
-	/** Teste 2: banco existente com os scripts antigos. Sobe com baseline, sem executar nem apagar nada. */
+	/**
+	 * Teste 2: banco existente com os scripts antigos. Sobe com baseline, sem
+	 * executar de novo nem apagar nada; só as migrações criadas depois do Flyway
+	 * rodam, e o banco fica com a mesma estrutura de um banco novo.
+	 */
 	@Test
 	@Order(4)
 	public void testMainBancoExistente() {
 		try (BancoTemporarioTeste existente = BancoTemporarioTeste.criar("app_existente")) {
 			existente.prepararComoBancoAnteriorAoFlyway("20261112.162000");
 			existente.executar("INSERT INTO public.categoria (id, nome, empresa_id) VALUES (nextval('seq_categoria'), 'Cadastrada em uso', 1)");
-			List<String> estruturaAntes = existente.estrutura();
 			int categorias = existente.contar("SELECT count(*) FROM public.categoria");
 
 			try (ConfigurableApplicationContext contexto = subir(existente)) {
 				assertEquals(0, contexto.getBean(Flyway.class).info().pending().length);
 			}
 
-			assertEquals(List.of("20261112.162000|BASELINE"),
-					existente.consultar("SELECT version || '|' || type FROM public.flyway_schema_history"));
-			assertEquals(estruturaAntes, existente.estrutura());
+			assertEquals(List.of("20261112.162000|BASELINE", "20261112.220600|SQL", "20261112.220700|SQL"),
+					existente.consultar("SELECT version || '|' || type FROM public.flyway_schema_history ORDER BY installed_rank"));
+			assertEquals(estrutura, existente.estrutura(), "o banco existente ficou diferente de um banco novo: "
+					+ BancoTemporarioTeste.diferencas(estrutura, existente.estrutura()));
 			assertEquals(categorias, existente.contar("SELECT count(*) FROM public.categoria"));
 		}
 	}

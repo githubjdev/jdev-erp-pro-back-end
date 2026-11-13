@@ -102,6 +102,22 @@ public class UsuarioService {
 	}
 
 
+	/* P25 (2026-11-12): usuário com ROLE_ADMIN nunca é apagado pela API, e o admin logado não remove o próprio acesso */
+	static final String MSG_APAGAR_A_SI_MESMO = "Você não pode apagar o seu próprio usuário: perderia o acesso ao sistema. "
+			+ "Se precisar, peça a outro administrador que remova o seu acesso ROLE_ADMIN e depois apague o usuário.";
+
+	static final String MSG_ADMIN_NAO_APAGA = "Usuário administrador não pode ser apagado. Para apagá-lo, remova antes o acesso "
+			+ "ROLE_ADMIN dele em Acessos do usuário e tente de novo.";
+
+	static final String MSG_BLOQUEAR_A_SI_MESMO = "Você não pode bloquear o seu próprio usuário: perderia o acesso ao sistema. "
+			+ "Se precisar, peça a outro administrador que remova o seu acesso ROLE_ADMIN e depois faça o bloqueio.";
+
+	static final String MSG_ADMIN_NAO_BLOQUEIA = "Usuário administrador não pode ser bloqueado por outro administrador. "
+			+ "Para bloqueá-lo, remova antes o acesso ROLE_ADMIN dele em Acessos do usuário e tente de novo.";
+
+	static final String MSG_NADA_A_APAGAR = "Nenhum usuário para deletar: os administradores não são apagados e os demais "
+			+ "já foram deletados.";
+
 	/*Cadastro, edição e exclusão de usuários são área de administração*/
 	private void exigirAdmin(String operacao) {
 		if (!usuarioLogadoService.isAdmin()) {
@@ -122,7 +138,7 @@ public class UsuarioService {
 
 
 		if(usuarioDto.getSenha() == null || usuarioDto.getSenha().length() < 5) {
-			throw new MsgApiException("A senha deve ter mais de 5 caracteres.");
+			throw new MsgApiException("A senha deve ter no mínimo 5 caracteres.");
 		}
 
 		if (usuarioRepository.existePorPessoa(usuarioDto.getPessoaId(), usuarioLogadoService.getEmpresaIdLogada())) {
@@ -139,6 +155,9 @@ public class UsuarioService {
 		List<Role>  roles = roleService.buscaPorAcesso("ROLE_USER");
 
 		Usuario usuario = new Usuario();
+
+		/*liberado nulo vira false: liberar o usuário é decisão explícita do admin*/
+		usuarioDto.setLiberado(Boolean.TRUE.equals(usuarioDto.getLiberado()));
 
 		usuario.setLogin(usuarioDto.getLogin());
 		usuario.setSenha(passwordEncoder.encode(usuarioDto.getSenha()));
@@ -176,8 +195,22 @@ public class UsuarioService {
 			throw new MsgApiException("Id do usuário deve ser informado para atualizar.");
 		}
 
+		/*liberado nulo vira false: liberar o usuário é decisão explícita do admin*/
+		usuarioDto.setLiberado(Boolean.TRUE.equals(usuarioDto.getLiberado()));
+		boolean bloqueando = !usuarioDto.getLiberado();
+
+		/*O admin logado não tira o próprio acesso (P25)*/
+		if (bloqueando && usuarioLogadoService.isUsuarioLogado(usuarioDto.getId())) {
+			throw new MsgApiException(MSG_BLOQUEAR_A_SI_MESMO, HttpStatus.FORBIDDEN);
+		}
+
 		Usuario usuarioBanco = buscarPorId(usuarioDto.getId(), usuarioLogadoService.getEmpresaIdLogada())
 				.orElseThrow(() -> new MsgApiException("Usuário não encontrado para a empresa logada."));
+
+		/*P25: um admin não bloqueia outro; quem já estava bloqueado pode continuar assim e ser editado*/
+		if (bloqueando && Boolean.TRUE.equals(usuarioBanco.getLiberado()) && usuarioBanco.idAdmin()) {
+			throw new MsgApiException(MSG_ADMIN_NAO_BLOQUEIA);
+		}
 
 		if (usuarioRepository.existeOutroUsuarioComPessoa(usuarioDto.getPessoaId(), usuarioDto.getId(), usuarioLogadoService.getEmpresaIdLogada())) {
 			throw new MsgApiException("Existe outro usuário associado a pessoa que foi selecionada.");
@@ -273,30 +306,56 @@ public class UsuarioService {
 	public void deleteById(Long id, Long idEmpresa) {
 		exigirAdmin("deletar usuários");
 
-		if (!usuarioRepository.existsById(id, idEmpresa)) {
-			throw new MsgApiException("Usuário não encontrado ou já foi deletado.");
+		Usuario usuario = usuarioRepository.buscarPorId(id, idEmpresa)
+				.orElseThrow(() -> new MsgApiException("Usuário não encontrado ou já foi deletado."));
+
+		/*P25: o admin logado não se apaga, e nenhum admin é apagado*/
+		if (usuarioLogadoService.isUsuarioLogado(usuario.getId())) {
+			throw new MsgApiException(MSG_APAGAR_A_SI_MESMO, HttpStatus.FORBIDDEN);
+		}
+		if (usuario.idAdmin()) {
+			throw new MsgApiException(MSG_ADMIN_NAO_APAGA);
 		}
 
 		clienteFuncionarioService.removeUserClienteFuncionarioId(id, idEmpresa);
 		usuarioRepository.deleteById(id, idEmpresa);
 	}
 
+	/**
+	 * Apaga os usuários da empresa que não são administradores (P25): o admin
+	 * logado e os outros admins ficam. Antes, solta o vínculo dos cadastros de
+	 * cliente/funcionário com esses usuários, como no deleteById.
+	 *
+	 * @return quantidade de usuários apagados
+	 */
 	@Transactional
 	public long deleteAll(Long empresaID) {
 		exigirAdmin("deletar usuários");
 
-		if (usuarioRepository.total(empresaID) == 0) {
-			throw new MsgApiException("Nenhum usuário encontrado para deletar ou todos já foram deletados.");
+		List<Long> naoAdministradores = usuarioRepository.findAll(empresaID).stream()
+				.filter(usuario -> !usuario.idAdmin())
+				.map(Usuario::getId)
+				.toList();
+
+		if (naoAdministradores.isEmpty()) {
+			throw new MsgApiException(MSG_NADA_A_APAGAR);
 		}
 
-		return usuarioRepository.deleteAll(empresaID);
+		apagarSemVinculos(naoAdministradores, empresaID);
+		return naoAdministradores.size();
+	}
+
+	private void apagarSemVinculos(List<Long> ids, Long empresaId) {
+		ids.forEach(id -> clienteFuncionarioService.removeUserClienteFuncionarioId(id, empresaId));
+		usuarioRepository.deletarAllById(ids, empresaId);
 	}
 
 	@Transactional
 	void deletarAllById(Iterable<Long> ids, Long empresaId) {
 		exigirAdmin("deletar usuários");
 
-		List<Long> encontrados = usuarioRepository.buscarPorIds(ids, empresaId).stream().map(Usuario::getId).toList();
+		List<Usuario> usuarios = usuarioRepository.buscarPorIds(ids, empresaId);
+		List<Long> encontrados = usuarios.stream().map(Usuario::getId).toList();
 		List<Long> naoEncontrados = new ArrayList<>();
 		ids.forEach(id -> {
 			if (!encontrados.contains(id)) {
@@ -312,7 +371,17 @@ public class UsuarioService {
 			throw new MsgApiException("Usuários não encontrados ou já deletados: " + naoEncontrados);
 		}
 
-		usuarioRepository.deletarAllById(ids, empresaId);
+		/*P25: tudo ou nada; com o admin logado ou outro admin na lista, nada é apagado*/
+		if (encontrados.stream().anyMatch(usuarioLogadoService::isUsuarioLogado)) {
+			throw new MsgApiException(MSG_APAGAR_A_SI_MESMO, HttpStatus.FORBIDDEN);
+		}
+		List<Long> administradores = usuarios.stream().filter(Usuario::idAdmin).map(Usuario::getId).toList();
+		if (!administradores.isEmpty()) {
+			throw new MsgApiException("Usuários administradores não podem ser apagados: " + administradores
+					+ ". Remova antes o acesso ROLE_ADMIN deles em Acessos do usuário ou tire-os da lista.");
+		}
+
+		apagarSemVinculos(encontrados, empresaId);
 	}
 
 	public List<Usuario> buscarPorIds(Iterable<Long> ids, Long empresaId) {

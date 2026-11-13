@@ -2,7 +2,7 @@ package br.com.jdeverp.pro.enums;
 
 public enum TipoPessoa {
 
-	JURIDICA("Jurídica"), FISICA("Fisíca");
+	JURIDICA("Jurídica"), FISICA("Física");
 
 	private final String descricao;
 

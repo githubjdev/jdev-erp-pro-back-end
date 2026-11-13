@@ -169,4 +169,11 @@ public class TestPedidoController extends TestContextoApi {
 		delete("/api/pedido/deletarTodos").andExpect(status().isBadRequest());
 	}
 
+
+	@Test
+	@Order(100)
+	public void testListarPaginado() throws Exception {
+		conferirPaginado("/api/pedido/paginado");
+	}
+
 }

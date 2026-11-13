@@ -2,6 +2,7 @@ package br.com.jdeverp.pro.controller;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -138,6 +139,26 @@ public class TestRoleUsuarioController extends TestContextoApi {
 		delete("/api/roleUsuario/deletar/" + idRoleUsuario).andExpect(status().isOk())
 				.andExpect(content().string("Role do usuário deletado com sucesso."));
 		delete("/api/roleUsuario/deletar/" + idRoleUsuario).andExpect(status().isBadRequest());
+	}
+
+	/** P25: o admin logado não remove nem altera os próprios acessos. */
+	@Test
+	@Order(10)
+	public void testRemoverOsPropriosAcessos() throws Exception {
+		Long idProprio = jdbcTemplate.queryForObject("select id from role_usuario where usuario_id = ? and acesso_id = ?",
+				Long.class, admin.usuarioId(), roleAdmin.getId());
+
+		delete("/api/roleUsuario/deletar/" + idProprio).andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.message").value(startsWith("Você não pode remover ou alterar os seus próprios acessos")));
+		delete("/api/roleUsuario/deletarPorUsuarioERole/" + admin.usuarioId() + "/" + roleAdmin.getId())
+				.andExpect(status().isForbidden());
+		post("/api/roleUsuario/atualizar", roleUsuarioJson(idProprio, roleTeste.getId(), operador.usuarioId()))
+				.andExpect(status().isForbidden());
+
+		/* Continua com a ROLE_ADMIN e com acesso à área de administração */
+		get("/api/roleUsuario/existePorUsuarioERole/{u}/{r}", admin.usuarioId(), roleAdmin.getId())
+				.andExpect(jsonPath("$").value(true));
+		get("/api/role/listar").andExpect(status().isOk());
 	}
 
 }

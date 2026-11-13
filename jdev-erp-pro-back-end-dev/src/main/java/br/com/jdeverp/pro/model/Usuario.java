@@ -62,8 +62,10 @@ public class Usuario extends EntidadeBase implements UserDetails {
 	@Column(nullable = false, unique = true)
 	private String senha;
 	
+	/*NOT NULL no banco (V20261112_220700); nulo vira false no UsuarioService*/
 	@JsonIgnore
 	@ToString.Include
+	@Column(nullable = false)
 	private Boolean liberado = true;
 	
 	@JsonIgnore
@@ -133,7 +135,8 @@ public class Usuario extends EntidadeBase implements UserDetails {
 	@JsonIgnore
 	@Override
 	public boolean isEnabled() {
-		return liberado;
+		/*liberado nulo conta como bloqueado (antes dava NullPointerException no login)*/
+		return Boolean.TRUE.equals(liberado);
 	}
 	
 	@JsonIgnore

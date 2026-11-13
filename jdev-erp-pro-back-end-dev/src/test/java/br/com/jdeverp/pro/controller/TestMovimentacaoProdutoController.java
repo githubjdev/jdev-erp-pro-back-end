@@ -171,4 +171,11 @@ public class TestMovimentacaoProdutoController extends TestContextoApi {
 		delete("/api/movimentacaoProduto/deletarTodos").andExpect(status().isBadRequest());
 	}
 
+
+	@Test
+	@Order(100)
+	public void testListarPaginado() throws Exception {
+		conferirPaginado("/api/movimentacaoProduto/paginado");
+	}
+
 }

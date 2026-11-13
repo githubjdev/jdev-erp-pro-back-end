@@ -43,6 +43,12 @@ public class EmpresaService {
 	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
 
+	static final String MSG_APAGAR_PROPRIA_EMPRESA = "Você não pode apagar a sua própria empresa: você e os usuários dela "
+			+ "perderiam o acesso ao sistema. Se ela precisar mesmo ser apagada, peça a um administrador de outra empresa.";
+
+	static final String MSG_BLOQUEAR_PROPRIA_EMPRESA = "Você não pode bloquear a sua própria empresa: você e os usuários dela "
+			+ "perderiam o acesso ao sistema. Se ela precisar mesmo ser bloqueada, peça a um administrador de outra empresa.";
+
 	/*Empresa é dado global (cadastro dos clientes do SaaS): só ROLE_ADMIN cadastra, altera, apaga ou lista*/
 	private void exigirAdmin(String operacao) {
 		if (!usuarioLogadoService.isAdmin()) {
@@ -68,6 +74,8 @@ public class EmpresaService {
 			throw new MsgApiException("Já existe uma empresa cadastrada para a pessoa: " + nome);
 		}
 
+		/*bloqueio nulo vira false (decidido em 2026-11-12)*/
+		empresa.setBloqueio(Boolean.TRUE.equals(empresa.getBloqueio()));
 		empresa.setPlano(validarPlano(empresa.getPlano()));
 		/*Referência gerenciada no lugar do objeto do request (só com id), para o DTO ler o nome da pessoa*/
 		empresa.setPessoa(entityManager.getReference(Pessoa.class, empresa.getPessoa().getId()));
@@ -88,6 +96,14 @@ public class EmpresaService {
 
 		if (existente == null) {
 			throw new MsgApiException("Empresa com id: " + empresa.getId() + " não foi encontrada.");
+		}
+
+		/*bloqueio nulo vira false (decidido em 2026-11-12)*/
+		empresa.setBloqueio(Boolean.TRUE.equals(empresa.getBloqueio()));
+
+		/*P25: bloquear a própria empresa tiraria o acesso do admin logado e de todos os usuários dela*/
+		if (empresa.getBloqueio() && empresa.getId().equals(usuarioLogadoService.getEmpresaIdLogada())) {
+			throw new MsgApiException(MSG_BLOQUEAR_PROPRIA_EMPRESA, HttpStatus.FORBIDDEN);
 		}
 
 		if (empresa.getPessoa() == null || empresa.getPessoa().getId() == null) {
@@ -155,6 +171,11 @@ public class EmpresaService {
 	@Transactional
 	public void deleteById(Long id) {
 		exigirAdmin("deletar");
+
+		/*P25: apagar a própria empresa tiraria o acesso do admin logado e de todos os usuários dela*/
+		if (id != null && id.equals(usuarioLogadoService.getEmpresaIdLogada())) {
+			throw new MsgApiException(MSG_APAGAR_PROPRIA_EMPRESA, HttpStatus.FORBIDDEN);
+		}
 
 		if (empresaRepository.buscarPorId(id) == null) {
 			throw new MsgApiException("Empresa não encontrada ou já foi deletada.");
