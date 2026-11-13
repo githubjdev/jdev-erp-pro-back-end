@@ -116,7 +116,7 @@ Ver `CLAUDE.md` (Comandos).
 
 **Banco e configuração**
 - **`ddl-auto=update` nos dois perfis:** desde 2026-11-12, o Flyway versiona a estrutura, mas o `update` continua e pode criar coluna ou tabela fora das migrações. Trocar por `validate` é a P22.
-- **`-pro` sem Flyway:** o banco `jdev-erp-pro-prod` não tem o V2 e tem as uniques `unique_sku` e `unique_inscricao_estadual`, que o dev não tem (P23).
+- **Banco de produção sem Flyway:** o `-pro` já tem o Flyway (2026-11-12), mas o banco `jdev-erp-pro-prod` não foi adotado. Ele não tem o V2 e tem as uniques `unique_sku` e `unique_inscricao_estadual`, que o dev não tem (P23).
 - **Prod igual ao dev:** o `application-prod.properties` é cópia do dev.
 - **Propriedades obsoletas ou sem efeito:**
   - `spring.http.encoding.*`, `spring.resources.*`, `server.tomcat.max-threads`;
@@ -152,5 +152,5 @@ Ver `CLAUDE.md` (Comandos).
   - `TipoPessoa.FISICA` tinha a descrição "Fisíca". **Corrigido** para "Física".
 
 **Repositório**
-- **Módulos duplicados:** `-dev` e `-pro` são quase iguais e não têm POM pai (P2). Toda mudança no `-dev` tem de ser copiada à mão para o `-pro`; a última vez foi em 2026-11-12, com o trabalho de 2026-11-11.
+- **Módulos duplicados:** `-dev` e `-pro` são quase iguais e não têm POM pai (P2). Toda mudança no `-dev` tem de ser copiada à mão para o `-pro`; a última vez foi em 2026-11-12, com todo o trabalho até essa data (Flyway, testes e P25).
 - **Logs soltos:** `*.log` e `*.log.*.gz` são gerados na raiz do módulo. Desde a otimização, estão no `.gitignore` da raiz.

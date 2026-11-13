@@ -1,7 +1,7 @@
 # Flyway — versionamento do banco
 
-Escopo: `jdev-erp-pro-back-end-dev/`. Implantado em 2026-11-12.
-O `-pro` ainda não tem Flyway; ver [Pendências](#13-pendências).
+Escopo: `jdev-erp-pro-back-end-dev/` e `jdev-erp-pro-back-end-pro/`, com as mesmas migrações. Implantado em 2026-11-12 no `-dev` e copiado para o `-pro` no mesmo dia.
+O banco `jdev-erp-pro-prod` ainda não foi adotado; ver a seção 8 e as [Pendências](#13-pendências).
 
 ## 1. O que é o Flyway no projeto
 O Flyway aplica no PostgreSQL, em ordem, os scripts SQL versionados de `src/main/resources/db/migration/`. Cada script aplicado fica registrado na tabela `flyway_schema_history`, com checksum, data, duração e resultado. Um script nunca roda duas vezes no mesmo banco.
@@ -208,7 +208,7 @@ Se houver diferença, resolva com uma migração nova depois do baseline, ou doc
   - Adotado: `BASELINE` em `20261112.162000`, gravado na primeira subida dos testes, depois da conferência.
   - Antes disso, o mesmo processo foi validado numa cópia integral do banco (estrutura e dados): nenhum dado ou objeto mudou.
   - Depois, recebeu a `20261112.220600` e a `20261112.220700` (nenhum nulo a converter). Está na versão `20261112.220700`.
-- **`jdev-erp-pro-prod`:** não adotado (o `-pro` não tem Flyway). Diferenças encontradas no `pg_dump` (só leitura):
+- **`jdev-erp-pro-prod`:** não adotado. O `-pro` já tem o Flyway, mas ainda não subiu nesse banco. A primeira subida precisa de `SPRING_FLYWAY_BASELINE_VERSION=20261112.161000`; sem ela, o baseline padrão é recusado e nada é gravado. Diferenças encontradas no `pg_dump` (só leitura):
   - **sem o V2** (P13): precisa de baseline em `20261112.161000`;
   - **duas uniques a mais, sobras de versões antigas das entidades:**
     - `unique_sku` (SKU único no banco inteiro, contra o `unique_sku_empresa` da entidade);
@@ -298,7 +298,7 @@ SPRING_PROFILES_JDEV_ERP_PRO=prod java -jar target/jdev-erp-pro-back-end-dev-0.0
 ## 13. Pendências
 Registradas em `docs/pendencias.md`:
 - **P22:** trocar `ddl-auto=update` por `validate` agora que o Flyway cria a estrutura. Não mudado sem decisão.
-- **P23:** adotar o Flyway no `-pro`, com baseline `20261112.161000` no `jdev-erp-pro-prod`, e decidir sobre as uniques `unique_sku` e `unique_inscricao_estadual` que só existem lá.
+- **P23:** fazer a primeira subida do `-pro` no `jdev-erp-pro-prod`, com baseline `20261112.161000`, e decidir sobre as uniques `unique_sku` e `unique_inscricao_estadual` que só existem lá. O código do `-pro` já tem o Flyway.
 - **P24:** senha de teste do admin da carga inicial num banco novo de produção.
 
 ## 14. Testes automatizados

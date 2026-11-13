@@ -1,7 +1,10 @@
 package br.com.jdeverp.pro.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.lenient;
@@ -9,6 +12,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -238,6 +242,203 @@ public class TestRoleUsuarioService {
 
 		assertEquals("Associação de usuário com acesso é duplicada e não pode ser permitida.", erro.getMessage());
 		verify(roleUsuarioRepository, never()).saveAndFlush(any());
+	}
+
+	@Test
+	public void testAtualizarUsuarioDeOutraEmpresa() {
+		when(roleUsuarioRepository.buscarPorIdEEmpresa(1L, EMPRESA_ID)).thenReturn(Optional.of(new RoleUsuario()));
+		when(roleRepository.findById(2L)).thenReturn(Optional.of(roleAdmin));
+		when(usuarioRepository.buscarPorId(99L, EMPRESA_ID)).thenReturn(Optional.empty());
+
+		MsgApiException erro = assertThrows(MsgApiException.class, () -> roleUsuarioService.atualizar(doRequest(1L, 2L, 99L)));
+
+		assertEquals("Usuário não encontrado para a empresa logada.", erro.getMessage());
+		verify(roleUsuarioRepository, never()).saveAndFlush(any());
+	}
+
+	/** Associação como vem do banco: acesso e usuário carregados. */
+	private RoleUsuario salvo(Long id) {
+		RoleUsuario roleUsuario = new RoleUsuario();
+		roleUsuario.setId(id);
+		roleUsuario.setAcesso(roleAdmin);
+		roleUsuario.setUsuario(usuarioDoBanco);
+		return roleUsuario;
+	}
+
+	@Test
+	public void testSalvarDevolveEntidade() {
+		acessoEUsuarioValidos();
+		when(roleUsuarioRepository.existePorUsuarioERole(7L, 2L, EMPRESA_ID)).thenReturn(false);
+		when(roleUsuarioRepository.saveAndFlush(any(RoleUsuario.class))).thenAnswer(i -> i.getArgument(0));
+
+		/* Usado pelo UsuarioService: devolve a entidade, com acesso e usuário do banco */
+		RoleUsuario salvo = roleUsuarioService.salvar(doRequest(null, 2L, 7L));
+
+		assertSame(roleAdmin, salvo.getAcesso());
+		assertSame(usuarioDoBanco, salvo.getUsuario());
+	}
+
+	@Test
+	public void testListar() {
+		when(roleUsuarioRepository.findAllByEmpresa(EMPRESA_ID)).thenReturn(List.of(salvo(1L), salvo(2L)));
+
+		List<RoleUsuarioDTO> lista = roleUsuarioService.listar();
+
+		assertEquals(List.of(1L, 2L), lista.stream().map(RoleUsuarioDTO::getId).toList());
+		assertEquals("João Souza", lista.get(0).getUsuarioNome());
+	}
+
+	@Test
+	public void testBuscarPorId() {
+		when(roleUsuarioRepository.buscarPorIdEEmpresa(1L, EMPRESA_ID)).thenReturn(Optional.of(salvo(1L)));
+		when(roleUsuarioRepository.buscarPorIdEEmpresa(2L, EMPRESA_ID)).thenReturn(Optional.empty());
+
+		assertEquals("ROLE_ADMIN", roleUsuarioService.buscarPorId(1L).orElseThrow().getAcessoNome());
+		/* Registro de outra empresa não aparece */
+		assertTrue(roleUsuarioService.buscarPorId(2L).isEmpty());
+	}
+
+	@Test
+	public void testFindAllByUsuario() {
+		when(roleUsuarioRepository.findAllByUsuario(7L, EMPRESA_ID)).thenReturn(List.of(salvo(1L)));
+
+		assertEquals(7L, roleUsuarioService.findAllByUsuario(7L, EMPRESA_ID).get(0).getUsuarioId());
+	}
+
+	@Test
+	public void testFindAllByRoleAndEmpresa() {
+		when(roleUsuarioRepository.findAllByRoleAndEmpresa(2L, EMPRESA_ID)).thenReturn(List.of(salvo(1L)));
+
+		assertEquals(2L, roleUsuarioService.findAllByRoleAndEmpresa(2L, EMPRESA_ID).get(0).getAcessoId());
+	}
+
+	@Test
+	public void testExistePorUsuarioERole() {
+		when(roleUsuarioRepository.existePorUsuarioERole(7L, 2L, EMPRESA_ID)).thenReturn(true);
+
+		assertTrue(roleUsuarioService.existePorUsuarioERole(7L, 2L, EMPRESA_ID));
+		assertFalse(roleUsuarioService.existePorUsuarioERole(7L, 1L, EMPRESA_ID));
+	}
+
+	@Test
+	public void testDeleteById() {
+		when(roleUsuarioRepository.buscarPorIdEEmpresa(1L, EMPRESA_ID)).thenReturn(Optional.of(salvo(1L)));
+
+		roleUsuarioService.deleteById(1L);
+
+		verify(roleUsuarioRepository).deleteById(1L);
+	}
+
+	@Test
+	public void testDeleteByIdDeOutraEmpresa() {
+		when(roleUsuarioRepository.buscarPorIdEEmpresa(1L, EMPRESA_ID)).thenReturn(Optional.empty());
+
+		MsgApiException erro = assertThrows(MsgApiException.class, () -> roleUsuarioService.deleteById(1L));
+
+		assertEquals("Registro de acesso não encontrado ou já foi deletado.", erro.getMessage());
+		verify(roleUsuarioRepository, never()).deleteById(anyLong());
+	}
+
+	@Test
+	public void testDeleteByUsuarioAndRole() {
+		when(roleUsuarioRepository.existePorUsuarioERole(7L, 2L, EMPRESA_ID)).thenReturn(true);
+
+		roleUsuarioService.deleteByUsuarioAndRole(7L, 2L, EMPRESA_ID);
+
+		verify(roleUsuarioRepository).deleteByUsuarioAndRole(7L, 2L, EMPRESA_ID);
+	}
+
+	@Test
+	public void testDeleteByUsuarioAndRoleNaoEncontrado() {
+		when(roleUsuarioRepository.existePorUsuarioERole(7L, 2L, EMPRESA_ID)).thenReturn(false);
+
+		MsgApiException erro = assertThrows(MsgApiException.class, () -> roleUsuarioService.deleteByUsuarioAndRole(7L, 2L, EMPRESA_ID));
+
+		assertEquals("Acesso do usuário não encontrado ou já foi deletado.", erro.getMessage());
+		verify(roleUsuarioRepository, never()).deleteByUsuarioAndRole(anyLong(), anyLong(), anyLong());
+	}
+
+	@Test
+	public void testDeleteByUsuarioAndRoleSemSerAdministrador() {
+		when(usuarioLogadoService.isAdmin()).thenReturn(false);
+
+		MsgApiException erro = assertThrows(MsgApiException.class, () -> roleUsuarioService.deleteByUsuarioAndRole(7L, 2L, EMPRESA_ID));
+
+		assertEquals("Apenas administradores podem remover acessos de usuários.", erro.getMessage());
+		assertEquals(HttpStatus.FORBIDDEN, erro.getStatus());
+		verify(roleUsuarioRepository, never()).deleteByUsuarioAndRole(anyLong(), anyLong(), anyLong());
+	}
+
+	/* P25: o admin logado não remove nem altera os próprios acessos */
+
+	@Test
+	public void testAtualizarAssociacaoDoProprioUsuario() {
+		when(roleUsuarioRepository.buscarPorIdEEmpresa(1L, EMPRESA_ID)).thenReturn(Optional.of(salvo(1L)));
+		when(usuarioLogadoService.isUsuarioLogado(7L)).thenReturn(true);
+
+		MsgApiException erro = assertThrows(MsgApiException.class, () -> roleUsuarioService.atualizar(doRequest(1L, 2L, 8L)));
+
+		assertEquals(RoleUsuarioService.MSG_PROPRIOS_ACESSOS, erro.getMessage());
+		assertEquals(HttpStatus.FORBIDDEN, erro.getStatus());
+		verify(roleUsuarioRepository, never()).saveAndFlush(any());
+		verify(roleRepository, never()).findById(anyLong());
+	}
+
+	@Test
+	public void testDeleteByIdAssociacaoDoProprioUsuario() {
+		when(roleUsuarioRepository.buscarPorIdEEmpresa(1L, EMPRESA_ID)).thenReturn(Optional.of(salvo(1L)));
+		when(usuarioLogadoService.isUsuarioLogado(7L)).thenReturn(true);
+
+		MsgApiException erro = assertThrows(MsgApiException.class, () -> roleUsuarioService.deleteById(1L));
+
+		assertEquals(RoleUsuarioService.MSG_PROPRIOS_ACESSOS, erro.getMessage());
+		assertEquals(HttpStatus.FORBIDDEN, erro.getStatus());
+		verify(roleUsuarioRepository, never()).deleteById(anyLong());
+	}
+
+	@Test
+	public void testDeleteByUsuarioAndRoleDoProprioUsuario() {
+		when(usuarioLogadoService.isUsuarioLogado(7L)).thenReturn(true);
+
+		MsgApiException erro = assertThrows(MsgApiException.class, () -> roleUsuarioService.deleteByUsuarioAndRole(7L, 2L, EMPRESA_ID));
+
+		assertEquals(RoleUsuarioService.MSG_PROPRIOS_ACESSOS, erro.getMessage());
+		assertEquals(HttpStatus.FORBIDDEN, erro.getStatus());
+		verify(roleUsuarioRepository, never()).existePorUsuarioERole(anyLong(), anyLong(), anyLong());
+		verify(roleUsuarioRepository, never()).deleteByUsuarioAndRole(anyLong(), anyLong(), anyLong());
+	}
+
+	@Test
+	public void testSalvarAcessoParaOProprioUsuario() {
+		acessoEUsuarioValidos();
+		when(roleUsuarioRepository.existePorUsuarioERole(7L, 2L, EMPRESA_ID)).thenReturn(false);
+		when(roleUsuarioRepository.saveAndFlush(any(RoleUsuario.class))).thenAnswer(i -> i.getArgument(0));
+
+		/* Dar acesso a si mesmo não remove nada: continua permitido */
+		assertSame(usuarioDoBanco, roleUsuarioService.salvar(doRequest(null, 2L, 7L)).getUsuario());
+	}
+
+	@Test
+	public void testSalvarAcessoSemId() {
+		RoleUsuario requisicao = doRequest(null, null, 7L);
+		requisicao.setAcesso(new Role());
+
+		MsgApiException erro = assertThrows(MsgApiException.class, () -> roleUsuarioService.salvar(requisicao));
+
+		assertEquals("Acesso deve ser informado para associar ao usuário.", erro.getMessage());
+		verify(roleRepository, never()).findById(anyLong());
+	}
+
+	@Test
+	public void testSalvarUsuarioSemId() {
+		when(roleRepository.findById(2L)).thenReturn(Optional.of(roleAdmin));
+		RoleUsuario requisicao = doRequest(null, 2L, null);
+		requisicao.setUsuario(new Usuario());
+
+		MsgApiException erro = assertThrows(MsgApiException.class, () -> roleUsuarioService.salvar(requisicao));
+
+		assertEquals("Usuário deve ser informado para associar acesso.", erro.getMessage());
+		verify(usuarioRepository, never()).buscarPorId(anyLong(), anyLong());
 	}
 
 }

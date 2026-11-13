@@ -110,7 +110,7 @@ public class TestPessoaController extends TestContextoApi {
 	@Test
 	@Order(2)
 	public void testSalvarDocumentoPorTipo() throws Exception {
-		/* Depende do V2_PESSOA_DOCUMENTO_POR_TIPO.sql: antes dele, cpf e cnpj eram NOT NULL no banco */
+		/* Depende da migração V20261112_162000__pessoa_documento_por_tipo (antigo V2_PESSOA_DOCUMENTO_POR_TIPO.sql): antes dela, cpf e cnpj eram NOT NULL no banco */
 		Map<String, Object> fisica = pessoaJson("Fisica sem CNPJ");
 		fisica.put("cnpj", "");
 		Long idFisica = id(post("/api/pessoa/salvar", fisica)
@@ -203,6 +203,13 @@ public class TestPessoaController extends TestContextoApi {
 		long antes = totalNoBanco();
 		delete("/api/pessoa/deletarTodos").andExpect(status().isBadRequest());
 		get("/api/pessoa/total").andExpect(jsonPath("$").value(antes));
+	}
+
+
+	@Test
+	@Order(100)
+	public void testListarPaginado() throws Exception {
+		conferirPaginado("/api/pessoa/paginado");
 	}
 
 }

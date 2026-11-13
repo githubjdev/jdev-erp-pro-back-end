@@ -2,7 +2,9 @@ package br.com.jdeverp.pro.controller;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -187,12 +189,100 @@ public class TestUsuarioController extends TestContextoApi {
 		delete("/api/usuario/deletar/" + idUsuario).andExpect(status().isBadRequest());
 	}
 
+	/* P25: usuário com ROLE_ADMIN nunca é apagado pela API, e o admin logado não remove o próprio acesso */
+
 	@Test
 	@Order(12)
-	public void testDeletarTodosComUsuariosEmUso() throws Exception {
-		/* Os usuários estão ligados aos cadastros de cliente/funcionário: o banco recusa e nada é apagado */
-		delete("/api/usuario/deletar-todos").andExpect(status().isBadRequest());
+	public void testDeletarAdministrador() throws Exception {
+		UsuarioTeste outroAdmin = criarUsuario("OutroAdmin", true);
+
+		delete("/api/usuario/deletar/" + outroAdmin.usuarioId()).andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Usuário administrador não pode ser apagado. Para apagá-lo, remova antes o "
+						+ "acesso ROLE_ADMIN dele em Acessos do usuário e tente de novo."));
+
+		delete("/api/usuario/deletar/" + admin.usuarioId()).andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.message").value(startsWith("Você não pode apagar o seu próprio usuário")));
+
+		get("/api/usuario/existe/{id}", outroAdmin.usuarioId()).andExpect(jsonPath("$").value(true));
 		get("/api/usuario/existe/{id}", admin.usuarioId()).andExpect(jsonPath("$").value(true));
+	}
+
+	@Test
+	@Order(13)
+	public void testAtualizarBloqueandoOProprioUsuario() throws Exception {
+		post("/api/usuario/atualizar", mapa("id", admin.usuarioId(), "login", admin.login(), "liberado", false,
+				"pessoaId", admin.pessoaId()))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.message").value(startsWith("Você não pode bloquear o seu próprio usuário")));
+
+		/* Continua liberado e com a sessão válida */
+		assertEquals(Boolean.TRUE, jdbcTemplate.queryForObject("select liberado from usuario where id = ?", Boolean.class,
+				admin.usuarioId()));
+		get("/api/usuario/total").andExpect(status().isOk());
+	}
+
+	private long usuariosNaoAdministradores() {
+		return jdbcTemplate.queryForObject("""
+				select count(*) from usuario u
+				 where u.empresa_id = ?
+				   and not exists (select 1 from role_usuario r join role ro on ro.id = r.acesso_id
+				                    where r.usuario_id = u.id and ro.acesso = 'ROLE_ADMIN')""", Long.class, empresaId);
+	}
+
+	@Test
+	@Order(14)
+	public void testDeletarTodosUsuarios() throws Exception {
+		UsuarioTeste comum = criarUsuario("ComumLote", false);
+		long naoAdministradores = usuariosNaoAdministradores();
+		long administradores = jdbcTemplate.queryForObject("select count(*) from usuario where empresa_id = ?", Long.class,
+				empresaId) - naoAdministradores;
+
+		delete("/api/usuario/deletar-todos").andExpect(status().isOk())
+				.andExpect(content().string("Total de " + naoAdministradores + " usuários deletados com sucesso! Os administradores foram mantidos."));
+
+		/* Os usuários comuns saíram, com os acessos; o cadastro de cliente/funcionário fica, sem usuário */
+		get("/api/usuario/existe/{id}", comum.usuarioId()).andExpect(jsonPath("$").value(false));
+		assertEquals(0L, jdbcTemplate.queryForObject("select count(*) from role_usuario where usuario_id = ?", Long.class,
+				comum.usuarioId()));
+		assertNull(jdbcTemplate.queryForObject("select usuario_id from cliente_funcionario where id = ?", Long.class,
+				comum.clienteFuncionarioId()));
+
+		/* Todos os admins ficaram, e o logado continua com acesso */
+		assertEquals(0L, usuariosNaoAdministradores());
+		assertEquals(administradores, jdbcTemplate.queryForObject("select count(*) from usuario where empresa_id = ?", Long.class,
+				empresaId));
+		get("/api/usuario/total").andExpect(status().isOk());
+
+		delete("/api/usuario/deletar-todos").andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Nenhum usuário para deletar: os administradores não são apagados e os demais "
+						+ "já foram deletados."));
+	}
+
+	@Test
+	@Order(15)
+	public void testBloquearOutroAdministrador() throws Exception {
+		UsuarioTeste outroAdmin = criarUsuario("AdminBloqueio", true);
+
+		post("/api/usuario/atualizar", mapa("id", outroAdmin.usuarioId(), "login", outroAdmin.login(), "liberado", false,
+				"pessoaId", outroAdmin.pessoaId()))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Usuário administrador não pode ser bloqueado por outro administrador. "
+						+ "Para bloqueá-lo, remova antes o acesso ROLE_ADMIN dele em Acessos do usuário e tente de novo."));
+
+		assertEquals(Boolean.TRUE, jdbcTemplate.queryForObject("select liberado from usuario where id = ?", Boolean.class,
+				outroAdmin.usuarioId()));
+
+		/* Editar outro admin sem bloqueá-lo continua permitido */
+		post("/api/usuario/atualizar", mapa("id", outroAdmin.usuarioId(), "login", outroAdmin.login() + ".novo", "liberado", true,
+				"pessoaId", outroAdmin.pessoaId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.login").value(outroAdmin.login() + ".novo"));
+	}
+
+	@Test
+	@Order(100)
+	public void testListarPaginado() throws Exception {
+		conferirPaginado("/api/usuario/paginado");
 	}
 
 }

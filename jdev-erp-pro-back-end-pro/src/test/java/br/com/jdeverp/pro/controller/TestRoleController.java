@@ -1,6 +1,8 @@
 package br.com.jdeverp.pro.controller;
 
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -74,6 +76,51 @@ public class TestRoleController extends TestContextoApi {
 				.andExpect(content().string("Role deletado com sucesso."));
 		delete("/api/role/deletar/" + idRole).andExpect(status().isBadRequest());
 		idRole = null;
+	}
+
+	@Test
+	@Order(6)
+	public void testAtualizarAcessoInexistente() throws Exception {
+		String novo = "ROLE_INEXISTENTE_" + sufixo.toUpperCase();
+
+		post("/api/role/atualizar", mapa("id", 0, "acesso", novo))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Acesso com id: 0 não foi encontrado."));
+
+		/* Não criou um acesso novo com o id inexistente */
+		get("/api/role/existePorAcesso/{acesso}", novo).andExpect(jsonPath("$").value(false));
+	}
+
+	/** ROLE_USER e ROLE_ADMIN são do sistema: ninguém renomeia nem apaga. */
+	@Test
+	@Order(7)
+	public void testAlterarOuApagarOProprioAcesso() throws Exception {
+		Long roleAdmin = role("ROLE_ADMIN").getId();
+		Long roleUser = role("ROLE_USER").getId();
+		try {
+			/* ROLE_USER e ROLE_ADMIN são do sistema: ninguém renomeia */
+			post("/api/role/atualizar", mapa("id", roleAdmin, "acesso", "ROLE_ADMIN_RENOMEADO"))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.message").value(startsWith("O acesso ROLE_ADMIN é do sistema e não pode ser renomeado")));
+			post("/api/role/atualizar", mapa("id", roleUser, "acesso", "ROLE_USER_RENOMEADO"))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.message").value(startsWith("O acesso ROLE_USER é do sistema e não pode ser renomeado")));
+			/* Nem são apagadas. Garantia extra: a ROLE_USER está em uso, então a FK também barraria a exclusão */
+			assertTrue(jdbcTemplate.queryForObject("select count(*) from role_usuario where acesso_id = ?", Long.class, roleUser) > 0);
+			delete("/api/role/deletar/" + roleAdmin)
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.message").value(startsWith("O acesso ROLE_ADMIN é do sistema e não pode ser apagado")));
+			delete("/api/role/deletar/" + roleUser)
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.message").value(startsWith("O acesso ROLE_USER é do sistema e não pode ser apagado")));
+
+			get("/api/role/buscarPorId/{id}", roleAdmin).andExpect(jsonPath("$.acesso").value("ROLE_ADMIN"));
+			get("/api/role/buscarPorId/{id}", roleUser).andExpect(jsonPath("$.acesso").value("ROLE_USER"));
+		} finally {
+			/* Se a proteção falhar, o banco dev não pode ficar sem a ROLE_ADMIN e a ROLE_USER */
+			executarSql("update role set acesso = 'ROLE_ADMIN' where id = ?", roleAdmin);
+			executarSql("update role set acesso = 'ROLE_USER' where id = ?", roleUser);
+		}
 	}
 
 }

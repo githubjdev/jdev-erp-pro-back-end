@@ -159,12 +159,52 @@ public class TestCategoriaRepository extends TestContextoSpring {
 	
 	@Test
 	public void testFindAll() {
-		
+
 		assertThrows(UnsupportedOperationException.class, () ->{
 			categoriaRepository.findAll();
 		});
 	}
-	
+
+	/* Isolamento por empresa: as mesmas consultas, numa empresa que não é a da categoria */
+	private static final Long OUTRA_EMPRESA = -1L;
+
+	private Categoria categoriaUnica(String nome) {
+		Categoria categoria = new Categoria();
+		categoria.setNome(nome + " " + System.nanoTime());
+		categoria.setEmpresa(empresaRepository.findById(1L).get());
+		return categoriaRepository.saveAndFlush(categoria);
+	}
+
+	@Test
+	public void testbuscaPorNomeOutraEmpresa() {
+		Categoria categoria = categoriaUnica("Instrumentos Músicais");
+
+		/* Sem acento e em minúsculas, na própria empresa */
+		assertEquals(categoria.getId(), categoriaRepository.buscaPorNome("instrumentos musicais", 1L).stream()
+				.filter(c -> c.getId().equals(categoria.getId())).findFirst().get().getId());
+		assertTrue(categoriaRepository.buscaPorNome(categoria.getNome(), OUTRA_EMPRESA).isEmpty());
+		assertTrue(categoriaRepository.findAll(OUTRA_EMPRESA).isEmpty());
+	}
+
+	@Test
+	public void testexistePorNomeOutraEmpresa() {
+		Categoria categoria = categoriaUnica("Jardinagem");
+
+		assertFalse(categoriaRepository.existePorNome(categoria.getNome(), OUTRA_EMPRESA));
+		assertFalse(categoriaRepository.existePorNomeDiferenteId(-1L, categoria.getNome(), OUTRA_EMPRESA));
+		/* A própria categoria não conta como outra com o mesmo nome */
+		assertFalse(categoriaRepository.existePorNomeDiferenteId(categoria.getId(), categoria.getNome(), 1L));
+	}
+
+	@Test
+	public void testdeleteByIdOutraEmpresa() {
+		Categoria categoria = categoriaUnica("Pet Shop");
+
+		categoriaRepository.deleteById(categoria.getId(), OUTRA_EMPRESA);
+
+		assertTrue(categoriaRepository.existsById(categoria.getId(), 1L));
+	}
+
 
 
 }

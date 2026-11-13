@@ -1,6 +1,7 @@
 package br.com.jdeverp.pro.controller;
 
 import static org.hamcrest.Matchers.hasItem;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -107,6 +108,39 @@ public class TestEmpresaController extends TestContextoApi {
 				.andExpect(content().string("Empresa deletada com sucesso."));
 		delete("/api/empresa/deletar/" + idEmpresaNova).andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("Empresa não encontrada ou já foi deletada."));
+	}
+
+	/** P25: o admin logado não apaga a própria empresa. */
+	@Test
+	@Order(8)
+	public void testDeletarPropriaEmpresa() throws Exception {
+		delete("/api/empresa/deletar/" + empresaId).andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.message").value("Você não pode apagar a sua própria empresa: você e os usuários dela "
+						+ "perderiam o acesso ao sistema. Se ela precisar mesmo ser apagada, peça a um administrador de outra empresa."));
+
+		get("/api/empresa/buscarPorId/{id}", empresaId).andExpect(status().isOk());
+	}
+
+	/** P25: o admin logado não bloqueia a própria empresa. */
+	@Test
+	@Order(9)
+	public void testBloquearPropriaEmpresa() throws Exception {
+		Long pessoaDaEmpresa = jdbcTemplate.queryForObject("select pessoa_id from empresa where id = ?", Long.class, empresaId);
+		Map<String, Object> bloqueio = empresaJson(empresaId, pessoaDaEmpresa, "logo");
+		bloqueio.put("bloqueio", true);
+
+		post("/api/empresa/atualizar", bloqueio).andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.message").value("Você não pode bloquear a sua própria empresa: você e os usuários dela "
+						+ "perderiam o acesso ao sistema. Se ela precisar mesmo ser bloqueada, peça a um administrador de outra empresa."));
+
+		/* Continua desbloqueada e com acesso */
+		assertEquals(Boolean.FALSE, jdbcTemplate.queryForObject("select bloqueio from empresa where id = ?", Boolean.class, empresaId));
+		get("/api/empresa/listar").andExpect(status().isOk());
+
+		/* bloqueio nulo vira false */
+		bloqueio.put("bloqueio", null);
+		post("/api/empresa/atualizar", bloqueio).andExpect(status().isOk()).andExpect(jsonPath("$.bloqueio").value(false));
+		assertEquals(Boolean.FALSE, jdbcTemplate.queryForObject("select bloqueio from empresa where id = ?", Boolean.class, empresaId));
 	}
 
 }

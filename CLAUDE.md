@@ -5,8 +5,10 @@ Java 25 · Spring Boot 4.0.6 · Spring Data JPA/Hibernate · Spring Security + J
 ## Repositório
 - Há dois projetos Maven independentes, sem POM pai:
   - `jdev-erp-pro-back-end-dev/`: onde se trabalha.
-  - `jdev-erp-pro-back-end-pro/`: quase cópia do `-dev`. Só mexa nele quando eu pedir.
+  - `jdev-erp-pro-back-end-pro/`: cópia do `-dev`. Só mexa nele quando eu pedir.
+    - Igual ao `-dev` desde 2026-11-12, exceto os nomes do projeto: `.project`, `pom.xml` (groupId, artifactId, nome e descrição), nos properties o banco, o context-path e o arquivo de log, e o context-path em `TestGlobalExceptionHandler` e `TestJwtAccessDeniedHandler`.
     - Os dois perfis do `-pro` usam o banco `jdev-erp-pro-prod`. Para rodar os testes do `-pro` no banco dev, defina `SPRING_DATASOURCE_URL` com o banco `jdev-erp-pro-dev`.
+    - O banco `jdev-erp-pro-prod` ainda não tem o Flyway: a primeira subida do `-pro` nele precisa de `SPRING_FLYWAY_BASELINE_VERSION=20261112.161000` (P23). Sem isso, ela é recusada e nada é gravado.
 - Os caminhos abaixo são relativos a `jdev-erp-pro-back-end-dev/`, e o `mvn` roda lá.
 
 ## Comandos
@@ -36,7 +38,7 @@ Java 25 · Spring Boot 4.0.6 · Spring Data JPA/Hibernate · Spring Security + J
 - Também: `validator/RepositoryEmpresaValidator`, `anotacoes/IgnoreEmpresaId`, `config/`, `util/`, `app/JDevERPPROApplication`.
 - **Testes:** `src/test/java/br/com/jdeverp/pro/`. Bases: `contexto/TestContextoRepository` (repository, com rollback e fábricas de registros; estende `contexto/TestContextoSpring`) e `contexto/TestContextoApi` (controller e autenticação, fluxo real). Services: Mockito, sem Spring. Migrações só de teste: `src/test/resources/db/migracao-teste/`.
 - **Configuração:** `src/main/resources/`. O `application.properties` só escolhe o perfil. Os perfis são `application-dev.properties` e `application-prod.properties`.
-- **Banco:** versionado pelo Flyway 11.14.1 (só no `-dev`; o `-pro` ainda não tem, ver P23). Detalhes em `docs/Flyway.md`.
+- **Banco:** versionado pelo Flyway 11.14.1, com as mesmas migrações no `-dev` e no `-pro` (o banco de produção ainda não foi adotado, ver P23). Detalhes em `docs/Flyway.md`.
   - As migrações ficam em `src/main/resources/db/migration/`, no padrão `VYYYYMMDD_HHMMSS__descricao.sql`, e rodam sozinhas na subida, antes do Hibernate.
   - Hoje: `V20261112_160000__criacao_estrutura_inicial`, `V20261112_161000__carga_inicial` (antigo `V1_INIT.sql`), `V20261112_162000__pessoa_documento_por_tipo` (antigo `V2_PESSOA_DOCUMENTO_POR_TIPO.sql`), `V20261112_220600__empresa_bloqueio_obrigatorio` e `V20261112_220700__usuario_liberado_obrigatorio`.
   - Migração nova entra também na lista `VERSOES` de `config/TestMigracoesFlyway` (o teste de nomes cobra).

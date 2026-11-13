@@ -44,10 +44,20 @@ public class RoleUsuarioService {
 	private UsuarioLogadoService usuarioLogadoService;
 
 
+	/* P25 (2026-11-12): o admin logado não remove nem altera os próprios acessos */
+	static final String MSG_PROPRIOS_ACESSOS = "Você não pode remover ou alterar os seus próprios acessos: perderia o acesso "
+			+ "ao sistema. Se precisar, peça a outro administrador que faça a alteração em Acessos do usuário.";
+
 	/*Dar ou tirar acesso é área de administração: sem isso, qualquer usuário se daria ROLE_ADMIN*/
 	private void exigirAdmin(String operacao) {
 		if (!usuarioLogadoService.isAdmin()) {
 			throw new MsgApiException("Apenas administradores podem " + operacao + ".", HttpStatus.FORBIDDEN);
+		}
+	}
+
+	private void recusarSeForDoUsuarioLogado(RoleUsuario roleUsuario) {
+		if (roleUsuario.getUsuario() != null && usuarioLogadoService.isUsuarioLogado(roleUsuario.getUsuario().getId())) {
+			throw new MsgApiException(MSG_PROPRIOS_ACESSOS, HttpStatus.FORBIDDEN);
 		}
 	}
 
@@ -99,6 +109,9 @@ public class RoleUsuarioService {
 		/*Só edita registro de usuário da empresa logada*/
 		RoleUsuario existente = roleUsuarioRepository.buscarPorIdEEmpresa(roleUsuario.getId(), empresaId)
 				.orElseThrow(() -> new MsgApiException("Registro de acesso não encontrado para a empresa logada."));
+
+		/*Trocar o acesso ou o usuário de uma associação do próprio admin tira um acesso dele*/
+		recusarSeForDoUsuarioLogado(existente);
 
 		Role acesso = validarAcesso(roleUsuario.getAcesso());
 		Usuario usuario = validarUsuario(roleUsuario.getUsuario(), empresaId);
@@ -172,12 +185,18 @@ public class RoleUsuarioService {
 			throw new MsgApiException("Registro de acesso não encontrado ou já foi deletado.");
 		}
 
+		recusarSeForDoUsuarioLogado(roleUsuario.get());
+
 		roleUsuarioRepository.deleteById(id);
 	}
 
 	@Transactional
 	public void deleteByUsuarioAndRole(Long idUsuario, Long idRole, Long idEmpresa) {
 		exigirAdmin("remover acessos de usuários");
+
+		if (usuarioLogadoService.isUsuarioLogado(idUsuario)) {
+			throw new MsgApiException(MSG_PROPRIOS_ACESSOS, HttpStatus.FORBIDDEN);
+		}
 
 		if (!roleUsuarioRepository.existePorUsuarioERole(idUsuario, idRole, idEmpresa)) {
 			throw new MsgApiException("Acesso do usuário não encontrado ou já foi deletado.");

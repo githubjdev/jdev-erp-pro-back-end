@@ -64,7 +64,9 @@ public class Empresa extends EntidadeBase {
 	@ToString.Include
 	private Boolean planoAtivo = false;
 
+	/*NOT NULL no banco (V20261112_220600); nulo vira false no EmpresaService*/
 	@ToString.Include
+	@Column(nullable = false)
 	private Boolean bloqueio = false;
 
 	@NotEmpty(message = "Informe a logo marca da empresa")

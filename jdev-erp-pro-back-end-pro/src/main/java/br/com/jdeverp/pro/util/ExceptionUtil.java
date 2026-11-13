@@ -45,7 +45,8 @@ public class ExceptionUtil {
 			String campo = matcher.group(1);
 			String valor = matcher.group(2);
 
-			return String.format(msg + " -> campo: %s valor: '%s'.", campo, valor);
+			/* Concatenação, não String.format: a mensagem do banco traz o valor digitado, e um "%" nele quebraria o formato */
+			return msg + " -> campo: " + campo + " valor: '" + valor + "'.";
 		}
 
 		return msg;

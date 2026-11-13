@@ -55,6 +55,18 @@
 			<scope>compile</scope>
 		</dependency>
 
+		<!-- Flyway: versionamento do banco. Versões gerenciadas pelo Spring Boot 4.0.6 (Flyway 11.14.1).
+		     No Boot 4 a autoconfiguração fica no starter; o suporte ao PostgreSQL é um módulo separado. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
