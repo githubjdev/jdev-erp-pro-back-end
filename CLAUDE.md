@@ -40,7 +40,7 @@ Java 25 · Spring Boot 4.0.6 · Spring Data JPA/Hibernate · Spring Security + J
 - **Configuração:** `src/main/resources/`. O `application.properties` só escolhe o perfil. Os perfis são `application-dev.properties` e `application-prod.properties`.
 - **Banco:** versionado pelo Flyway 11.14.1, com as mesmas migrações no `-dev` e no `-pro` (o banco de produção ainda não foi adotado, ver P23). Detalhes em `docs/Flyway.md`.
   - As migrações ficam em `src/main/resources/db/migration/`, no padrão `VYYYYMMDD_HHMMSS__descricao.sql`, e rodam sozinhas na subida, antes do Hibernate.
-  - Hoje: `V20261112_160000__criacao_estrutura_inicial`, `V20261112_161000__carga_inicial` (antigo `V1_INIT.sql`), `V20261112_162000__pessoa_documento_por_tipo` (antigo `V2_PESSOA_DOCUMENTO_POR_TIPO.sql`), `V20261112_220600__empresa_bloqueio_obrigatorio` e `V20261112_220700__usuario_liberado_obrigatorio`.
+  - Hoje: `V20261112_160000__criacao_estrutura_inicial`, `V20261112_161000__carga_inicial` (antigo `V1_INIT.sql`), `V20261112_162000__pessoa_documento_por_tipo` (antigo `V2_PESSOA_DOCUMENTO_POR_TIPO.sql`), `V20261112_220600__empresa_bloqueio_obrigatorio`, `V20261112_220700__usuario_liberado_obrigatorio` e `V20261125_100000__pedido_calculo_estoque` (preco_unitario, estoque_baixado, CHECK do estoque >= 0, ROLE_VENDEDOR e ROLE_GERENTE) e `V20261125_110000__produto_preco_custo` (produto.preco_custo).
   - Migração nova entra também na lista `VERSOES` de `config/TestMigracoesFlyway` (o teste de nomes cobra).
   - Banco anterior ao Flyway recebe baseline automático, conferido antes por `config/VerificacaoBaselineFlyway`. O banco dev está em baseline `20261112.162000` desde 2026-11-12 e hoje na versão `20261112.220700`.
   - O Hibernate continua com `ddl-auto=update` (P22).
@@ -64,7 +64,7 @@ Java 25 · Spring Boot 4.0.6 · Spring Data JPA/Hibernate · Spring Security + J
 - **Sessão:** JWT stateless. O token fica gravado em `usuario.token_sessao` e é conferido a cada requisição, então um login novo derruba o anterior.
 - **Acesso:**
   - A única rota pública é `POST /api/usuario/login`.
-  - Roles: `ROLE_USER` e `ROLE_ADMIN`. O `ROLE_ADMIN` é admin global, de todas as empresas, e é checado no service com `usuarioLogadoService.isAdmin()`.
+  - Roles: `ROLE_USER`, `ROLE_ADMIN`, `ROLE_VENDEDOR` e `ROLE_GERENTE` (as duas últimas, com o `ROLE_ADMIN`, podem mudar o status do pedido). O `ROLE_ADMIN` é admin global, de todas as empresas, e é checado no service com `usuarioLogadoService.isAdmin()`.
 - **Proteção do admin (P25):**
   - Usuário com `ROLE_ADMIN` nunca é apagado pela API, e um admin não bloqueia outro.
   - `ROLE_USER` e `ROLE_ADMIN` nunca são renomeadas nem apagadas: o código as procura pelo nome (`RoleService.ACESSOS_DO_SISTEMA`).
