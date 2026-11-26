@@ -13,6 +13,7 @@ public class ProdutoDTO {
 	private String descricao;
 	private String imagem;
 	private Double preco;
+	private Double precoCusto;
 	private Double estoque;
 	private Double estoqueMinimo;
 	private String sku;

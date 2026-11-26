@@ -113,7 +113,8 @@ public class TestProdutoService {
 		assertEquals("Informática", dto.getCategoriaNome());
 		assertEquals(EMPRESA_ID, dto.getEmpresaId());
 		assertEquals(10.0, dto.getPreco());
-		assertEquals(5.0, dto.getEstoque());
+		/* Estoque do request é ignorado: produto novo começa em 0 */
+		assertEquals(0.0, dto.getEstoque());
 		assertEquals(1.0, dto.getEstoqueMinimo());
 		assertEquals("SKU-Mouse", dto.getSku());
 		assertEquals("789", dto.getCodigoBarra());
@@ -154,12 +155,19 @@ public class TestProdutoService {
 
 	@Test
 	public void testAtualizar() {
-		when(produtoRepository.buscarPorId(1L, EMPRESA_ID)).thenReturn(Optional.of(salvo(1L, "Antigo")));
+		Produto antigo = salvo(1L, "Antigo");
+		antigo.setEstoque(7.0);
+		when(produtoRepository.buscarPorId(1L, EMPRESA_ID)).thenReturn(Optional.of(antigo));
 		when(produtoRepository.existePorNomeDiferenteId(1L, "Mouse", EMPRESA_ID)).thenReturn(false);
 		when(categoriaRepository.buscarPorId(4L, EMPRESA_ID)).thenReturn(Optional.of(categoriaDoBanco));
 		salvarDevolveOProprio();
 
-		ProdutoDTO dto = produtoService.atualizar(produto(1L, "Mouse", 4L));
+		Produto alteracao = produto(1L, "Mouse", 4L);
+		alteracao.setEstoque(999.0);
+		ProdutoDTO dto = produtoService.atualizar(alteracao);
+
+		/* Estoque do cadastro é ignorado: mantém o do banco */
+		assertEquals(7.0, dto.getEstoque());
 
 		assertEquals(1L, dto.getId());
 		assertEquals("Mouse", dto.getNome());
@@ -259,10 +267,37 @@ public class TestProdutoService {
 	@Test
 	public void testDeleteAll() {
 		when(usuarioLogadoService.isAdmin()).thenReturn(true);
-		when(produtoRepository.total(EMPRESA_ID)).thenReturn(2L);
-		when(produtoRepository.deleteAll(EMPRESA_ID)).thenReturn(2L);
+		when(produtoRepository.total(EMPRESA_ID)).thenReturn(3L);
+		/* Só os produtos sem item de pedido nem movimentação são apagados */
+		when(produtoRepository.idsSemUso(EMPRESA_ID)).thenReturn(List.of(1L, 2L));
 
 		assertEquals(2L, produtoService.deleteAll(EMPRESA_ID));
+
+		verify(produtoRepository).deletarAllById(List.of(1L, 2L), EMPRESA_ID);
+	}
+
+	@Test
+	public void testDeleteAllTodosEmUso() {
+		when(usuarioLogadoService.isAdmin()).thenReturn(true);
+		when(produtoRepository.total(EMPRESA_ID)).thenReturn(2L);
+		when(produtoRepository.idsSemUso(EMPRESA_ID)).thenReturn(List.of());
+
+		MsgApiException erro = assertThrows(MsgApiException.class, () -> produtoService.deleteAll(EMPRESA_ID));
+
+		assertEquals("Nenhum produto pode ser excluído em lote: todos têm pedido, item de pedido ou movimentação.", erro.getMessage());
+		verify(produtoRepository, never()).deletarAllById(any(), any());
+	}
+
+	@Test
+	public void testDeletarAllByIdComProdutoEmUso() {
+		when(usuarioLogadoService.isAdmin()).thenReturn(true);
+		when(produtoRepository.buscarPorIds(List.of(1L, 2L), EMPRESA_ID)).thenReturn(List.of(salvo(1L, "A"), salvo(2L, "B")));
+		when(produtoRepository.emUsoPorIds(List.of(1L, 2L), EMPRESA_ID)).thenReturn(List.of(salvo(2L, "B")));
+
+		MsgApiException erro = assertThrows(MsgApiException.class, () -> produtoService.deletarAllById(List.of(1L, 2L), EMPRESA_ID));
+
+		assertEquals("Produtos com pedido, item de pedido ou movimentação não podem ser excluídos em lote: [B]", erro.getMessage());
+		verify(produtoRepository, never()).deletarAllById(any(), any());
 	}
 
 	@Test

@@ -57,11 +57,19 @@ public class Produto extends EntidadeBase {
 	@ToString.Include
 	private Double preco;
 
-	@NotNull(message = "Estoque deve ser informado")
-	@Min(value = 1, message = "Estoque deve ser de no mínimo 1")
+	/*Preço de custo (opcional, padrão 0). Usado como preço do item em pedido de COMPRA.*/
+	@NotNull(message = "Preço de custo não pode ser nulo")
+	@Min(value = 0, message = "Preço de custo não pode ser negativo")
+	@Column(name = "preco_custo", nullable = false)
+	@ToString.Include
+	private Double precoCusto = 0.0;
+
+	/*Estoque nunca vem do cadastro do produto: só muda por pedido ou por movimentação de estoque lançada.
+	 * Se o request trouxer valor, o service ignora (produto novo começa em 0; na atualização mantém o atual).*/
+	@Min(value = 0, message = "Estoque não pode ser negativo")
 	@Column(nullable = false)
 	@ToString.Include
-	private Double estoque;
+	private Double estoque = 0.0;
 
 	@NotNull(message = "Estoque mínimo deve ser informado")
 	@Min(value = 1, message = "Estoque mínimo deve ser de no mínimo 1")

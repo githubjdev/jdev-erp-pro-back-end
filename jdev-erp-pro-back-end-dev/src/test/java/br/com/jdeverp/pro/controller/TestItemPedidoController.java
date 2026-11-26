@@ -147,8 +147,10 @@ public class TestItemPedidoController extends TestContextoApi {
 	@Test
 	@Order(10)
 	public void testDeletarTodosPorIds() throws Exception {
-		delete("/api/itemPedido/deletarTodosPorIds", ids(idItem2)).andExpect(status().isNoContent());
-		get("/api/itemPedido/existePorId/{id}", idItem2).andExpect(jsonPath("$").value(false));
+		/* Exclusão em lote bloqueada: o item continua existindo */
+		delete("/api/itemPedido/deletarTodosPorIds", ids(idItem2)).andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Exclusão em lote de itens de pedido não é permitida. Exclua um registro por vez."));
+		get("/api/itemPedido/existePorId/{id}", idItem2).andExpect(jsonPath("$").value(true));
 	}
 
 	@Test
@@ -172,9 +174,8 @@ public class TestItemPedidoController extends TestContextoApi {
 	@Test
 	@Order(13)
 	public void testDeletarTodos() throws Exception {
-		post("/api/itemPedido/salvar", itemJson(null, idProdutoB, 1)).andExpect(status().isOk());
-		delete("/api/itemPedido/deletarTodos").andExpect(status().isOk()).andExpect(jsonPath("$").value(1));
-		delete("/api/itemPedido/deletarTodos").andExpect(status().isBadRequest());
+		delete("/api/itemPedido/deletarTodos").andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Exclusão em lote de itens de pedido não é permitida. Exclua um registro por vez."));
 	}
 
 

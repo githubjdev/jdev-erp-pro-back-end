@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -38,7 +39,9 @@ import br.com.jdeverp.pro.model.Empresa;
 import br.com.jdeverp.pro.model.Pedido;
 import br.com.jdeverp.pro.model.Pessoa;
 import br.com.jdeverp.pro.model.Usuario;
+import br.com.jdeverp.pro.repository.ItemPedidoRepository;
 import br.com.jdeverp.pro.repository.PedidoRepository;
+import br.com.jdeverp.pro.repository.ProdutoRepository;
 import br.com.jdeverp.pro.repository.UsuarioRepository;
 
 /** Pedido da empresa logada, com vendedor e cliente da mesma empresa. Exclusão em lote só por ROLE_ADMIN (P21). */
@@ -55,6 +58,18 @@ public class TestPedidoService {
 
 	@Mock
 	private UsuarioLogadoService usuarioLogadoService;
+
+	@Mock
+	private ItemPedidoRepository itemPedidoRepository;
+
+	@Mock
+	private ProdutoRepository produtoRepository;
+
+	@Mock
+	private EstoquePedidoService estoquePedidoService;
+
+	@Spy
+	private PedidoCalculoService pedidoCalculoService = new PedidoCalculoService();
 
 	@InjectMocks
 	private PedidoService pedidoService;
@@ -127,7 +142,8 @@ public class TestPedidoService {
 		assertEquals("Vera Vendedora", dto.getVendedorNome());
 		assertEquals("Carlos Cliente", dto.getClienteNome());
 		assertEquals(EMPRESA_ID, dto.getEmpresaId());
-		assertEquals(new BigDecimal("106.00"), dto.getTotal());
+		/* Total calculado no servidor: sem itens, 0 - 5 + 10 + 1 */
+		assertEquals(new BigDecimal("6.00"), dto.getTotal());
 		assertEquals(new BigDecimal("10.00"), dto.getFrete());
 		assertEquals(FormaPagamento.PIX, dto.getFormaPagamento());
 		assertEquals(TipoPedido.VENDA, dto.getTipoPedido());
@@ -192,10 +208,11 @@ public class TestPedidoService {
 		PedidoDTO dto = pedidoService.atualizar(alteracao);
 
 		assertEquals("PED-2", dto.getNumeroPedido());
-		assertEquals(StatusPedido.CANCELADO, dto.getStatusPedido());
-		assertEquals(LocalDate.of(2026, 11, 11), dto.getDataPagamento());
-		assertEquals(LocalDate.of(2026, 11, 12), dto.getDataCancelamento());
-		assertEquals(new BigDecimal("50.00"), dto.getTotal());
+		/* Status, datas e totais não vêm do cliente */
+		assertEquals(StatusPedido.AGUARDANDO_PAGAMENTO, dto.getStatusPedido());
+		assertEquals(null, dto.getDataPagamento());
+		assertEquals(null, dto.getDataCancelamento());
+		assertEquals(new BigDecimal("6.00"), dto.getTotal());
 		assertEquals("Vera Vendedora", dto.getVendedorNome());
 		/* Grava o registro da empresa logada, não o objeto do request */
 		verify(pedidoRepository).saveAndFlush(existente);

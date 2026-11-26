@@ -81,6 +81,8 @@ public class TestIsolamentoExclusaoEmLote extends TestContextoApi {
 		ids.put(PEDIDO, pedido);
 		ids.put(ITEM_PEDIDO, salvar(tokenAdmin, ITEM_PEDIDO.api(), mapa("quantidade", 1.0, "subTotal", 10.0, "desconto", 0,
 				"total", 10.0, "produto", ref(produto), "pedido", ref(pedido))));
+		salvar(tokenAdmin, MOVIMENTACAO.api(), mapa("quantidade", 10.0, "valor", 10.0,
+				"tipoMovimentacaoProduto", "ENTRADA_INVENTARIO", "produto", ref(produto), "pedido", null));
 		ids.put(MOVIMENTACAO, salvar(tokenAdmin, MOVIMENTACAO.api(), mapa("quantidade", 1.0, "valor", 10.0,
 				"tipoMovimentacaoProduto", "SAIDA_PERDA", "produto", ref(produto), "pedido", null)));
 
@@ -128,7 +130,8 @@ public class TestIsolamentoExclusaoEmLote extends TestContextoApi {
 	}
 
 	Stream<Modulo> modulos() {
-		return Stream.of(MENSAGEM, MOVIMENTACAO, ITEM_PEDIDO, PEDIDO, PRODUTO, CLIENTE_FUNCIONARIO, PESSOA);
+		/* Movimentação e item de pedido têm exclusão em lote bloqueada (ver testExclusaoEmLoteBloqueada) */
+		return Stream.of(MENSAGEM, PEDIDO, PRODUTO, CLIENTE_FUNCIONARIO, PESSOA);
 	}
 
 	@ParameterizedTest(name = "{0}")
@@ -169,14 +172,17 @@ public class TestIsolamentoExclusaoEmLote extends TestContextoApi {
 	public void testDeletarTodosSoApagaAEmpresaLogada() throws Exception {
 		Map<String, Long> antes = registrosForaDaEmpresa();
 
-		/* Dos filhos para os pais, para o banco não recusar pela FK; o total devolvido é só o da empresa logada */
-		for (Modulo modulo : List.of(MENSAGEM, MOVIMENTACAO, ITEM_PEDIDO, PEDIDO, PRODUTO)) {
-			long daEmpresaAntes = registrosDaEmpresa(modulo.tabela());
-			delete("/api/" + modulo.api() + "/deletarTodos")
-					.andExpect(status().isOk())
-					.andExpect(jsonPath("$").value(daEmpresaAntes));
+		/* Só mensagem tem exclusão em lote liberada: o total devolvido é só o da empresa logada */
+		long mensagensAntes = registrosDaEmpresa(MENSAGEM.tabela());
+		delete("/api/mensagem/deletarTodos").andExpect(status().isOk()).andExpect(jsonPath("$").value(mensagensAntes));
+		assertEquals(0L, registrosDaEmpresa(MENSAGEM.tabela()));
+		assertEquals(antes, registrosForaDaEmpresa());
 
-			assertEquals(0L, registrosDaEmpresa(modulo.tabela()), modulo.api());
+		/* Movimentação e item de pedido: bloqueados. Pedido: o banco recusa (FK dos itens). Produto: todos em uso. Nada é apagado. */
+		for (Modulo modulo : List.of(MOVIMENTACAO, ITEM_PEDIDO, PEDIDO, PRODUTO)) {
+			long daEmpresaAntes = registrosDaEmpresa(modulo.tabela());
+			delete("/api/" + modulo.api() + "/deletarTodos").andExpect(status().isBadRequest());
+			assertEquals(daEmpresaAntes, registrosDaEmpresa(modulo.tabela()), modulo.api());
 			assertEquals(antes, registrosForaDaEmpresa(), modulo.api());
 		}
 
@@ -189,4 +195,23 @@ public class TestIsolamentoExclusaoEmLote extends TestContextoApi {
 		conferirOutraEmpresaIntacta();
 	}
 
+
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("modulosBloqueados")
+	@Order(4)
+	public void testExclusaoEmLoteBloqueada(Modulo modulo) throws Exception {
+		Long idDaEmpresa = daEmpresa.get(modulo);
+		Map<String, Long> antes = registrosForaDaEmpresa();
+
+		delete("/api/" + modulo.api() + "/deletarTodosPorIds", ids(idDaEmpresa))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("não é permitida")));
+
+		assertTrue(existe(modulo, idDaEmpresa));
+		assertEquals(antes, registrosForaDaEmpresa());
+	}
+
+	Stream<Modulo> modulosBloqueados() {
+		return Stream.of(MOVIMENTACAO, ITEM_PEDIDO);
+	}
 }

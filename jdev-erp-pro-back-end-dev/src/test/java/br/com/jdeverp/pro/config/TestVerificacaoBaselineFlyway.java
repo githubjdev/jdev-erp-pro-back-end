@@ -36,7 +36,7 @@ public class TestVerificacaoBaselineFlyway {
 	private static final String CONTAGEM_DADOS = """
 			SELECT (SELECT count(*) FROM public.plano) || ',' || (SELECT count(*) FROM public.empresa) || ','
 			       || (SELECT count(*) FROM public.pessoa) || ',' || (SELECT count(*) FROM public.usuario) || ','
-			       || (SELECT count(*) FROM public.categoria) || ',' || (SELECT count(*) FROM public.role)""";
+			       || (SELECT count(*) FROM public.categoria) || ',' || (SELECT count(*) FROM public.role WHERE acesso IN ('ROLE_ADMIN', 'ROLE_USER'))""";
 
 	private static List<String> historico(BancoTemporarioTeste banco) {
 		return banco.consultar("SELECT version || '|' || type FROM public.flyway_schema_history ORDER BY installed_rank");

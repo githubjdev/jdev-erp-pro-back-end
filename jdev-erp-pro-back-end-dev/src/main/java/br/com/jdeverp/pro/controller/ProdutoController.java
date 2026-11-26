@@ -51,6 +51,13 @@ public class ProdutoController {
                                 usuarioLogadoService.getEmpresaIdLogada()));
         }
 
+        /*Produtos com estoque igual ou abaixo do mínimo*/
+        @GetMapping("/estoqueBaixo")
+        public ResponseEntity<List<ProdutoDTO>> estoqueBaixo() {
+                return ResponseEntity.ok(produtoService.estoqueBaixo(
+                                usuarioLogadoService.getEmpresaIdLogada()));
+        }
+
         @GetMapping("/buscaPorNome/{nome}")
         public ResponseEntity<List<ProdutoDTO>> buscaPorNome(@PathVariable String nome) {
                 return ResponseEntity.ok(produtoService.buscaPorNome(nome,

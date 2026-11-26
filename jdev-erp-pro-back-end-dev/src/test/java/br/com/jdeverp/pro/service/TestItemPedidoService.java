@@ -21,11 +21,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 
 import br.com.jdeverp.pro.dto.ItemPedidoDTO;
 import br.com.jdeverp.pro.exception.MsgApiException;
@@ -60,6 +60,9 @@ public class TestItemPedidoService {
 	@Mock
 	private UsuarioLogadoService usuarioLogadoService;
 
+	@Spy
+	private PedidoCalculoService pedidoCalculoService = new PedidoCalculoService();
+
 	@InjectMocks
 	private ItemPedidoService itemPedidoService;
 
@@ -77,6 +80,7 @@ public class TestItemPedidoService {
 		Pedido pedido = new Pedido();
 		pedido.setId(id);
 		pedido.setNumeroPedido(numero);
+		pedido.setStatusPedido(br.com.jdeverp.pro.enums.StatusPedido.AGUARDANDO_PAGAMENTO);
 		return pedido;
 	}
 
@@ -84,6 +88,7 @@ public class TestItemPedidoService {
 		Produto produto = new Produto();
 		produto.setId(id);
 		produto.setNome(nome);
+		produto.setPreco(10.0);
 		return produto;
 	}
 
@@ -203,12 +208,14 @@ public class TestItemPedidoService {
 		when(itemPedidoRepository.saveAndFlush(existente)).thenReturn(existente);
 		ItemPedido alteracao = item(1L);
 		alteracao.setQuantidade(5.0);
-		alteracao.setTotal(new BigDecimal("50.00"));
+		alteracao.setTotal(new BigDecimal("999.00")); /* ignorado: total é calculado no servidor */
 
 		ItemPedidoDTO dto = itemPedidoService.atualizar(alteracao);
 
 		assertEquals(5.0, dto.getQuantidade());
-		assertEquals(new BigDecimal("50.00"), dto.getTotal());
+		/* preço do produto (10,00) x 5 = 50,00, menos o desconto do item (1,00) */
+		assertEquals(new BigDecimal("49.00"), dto.getTotal());
+		assertEquals(new BigDecimal("10.00"), dto.getPrecoUnitario());
 		assertEquals("Mouse", dto.getProdutoNome());
 		verify(itemPedidoRepository).saveAndFlush(existente);
 	}
@@ -287,6 +294,7 @@ public class TestItemPedidoService {
 	public void testDeleteById() {
 		when(itemPedidoRepository.buscarPorId(1L, EMPRESA_ID)).thenReturn(Optional.of(salvo(1L, PEDIDO_ID)));
 
+		when(pedidoRepository.buscarPorId(PEDIDO_ID, EMPRESA_ID)).thenReturn(Optional.of(pedido(PEDIDO_ID, "PED-1")));
 		itemPedidoService.deleteById(1L, PEDIDO_ID, EMPRESA_ID);
 
 		verify(itemPedidoRepository).deleteById(1L, PEDIDO_ID, EMPRESA_ID);
@@ -322,76 +330,18 @@ public class TestItemPedidoService {
 	}
 
 	@Test
-	public void testDeleteAll() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(true);
-		when(itemPedidoRepository.total(EMPRESA_ID)).thenReturn(2L);
-		when(itemPedidoRepository.deleteAll(EMPRESA_ID)).thenReturn(2L);
-
-		assertEquals(2L, itemPedidoService.deleteAll(EMPRESA_ID));
-	}
-
-	@Test
-	public void testDeleteAllSemRegistros() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(true);
-		when(itemPedidoRepository.total(EMPRESA_ID)).thenReturn(0L);
-
+	public void testDeleteAllBloqueado() {
 		MsgApiException erro = assertThrows(MsgApiException.class, () -> itemPedidoService.deleteAll(EMPRESA_ID));
 
-		assertEquals("Nenhum item de pedido encontrado para deletar ou todos já foram deletados.", erro.getMessage());
-		verify(itemPedidoRepository, never()).deleteAll(anyLong());
-	}
-
-	@Test
-	public void testDeleteAllSemSerAdministrador() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(false);
-
-		MsgApiException erro = assertThrows(MsgApiException.class, () -> itemPedidoService.deleteAll(EMPRESA_ID));
-
-		assertEquals("Apenas administradores podem excluir registros em lote.", erro.getMessage());
-		assertEquals(HttpStatus.FORBIDDEN, erro.getStatus());
+		assertEquals("Exclusão em lote de itens de pedido não é permitida. Exclua um registro por vez.", erro.getMessage());
 		verifyNoInteractions(itemPedidoRepository);
 	}
 
 	@Test
-	public void testDeletarAllById() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(true);
-		when(itemPedidoRepository.buscarPorIds(List.of(1L, 2L), EMPRESA_ID))
-				.thenReturn(List.of(salvo(1L, PEDIDO_ID), salvo(2L, PEDIDO_ID)));
-
-		itemPedidoService.deletarAllById(List.of(1L, 2L), EMPRESA_ID);
-
-		verify(itemPedidoRepository).deletarAllById(List.of(1L, 2L), EMPRESA_ID);
-	}
-
-	@Test
-	public void testDeletarAllByIdComIdNaoEncontrado() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(true);
-		when(itemPedidoRepository.buscarPorIds(List.of(1L, 2L), EMPRESA_ID)).thenReturn(List.of(salvo(1L, PEDIDO_ID)));
-
+	public void testDeletarAllByIdBloqueado() {
 		MsgApiException erro = assertThrows(MsgApiException.class, () -> itemPedidoService.deletarAllById(List.of(1L, 2L), EMPRESA_ID));
 
-		assertEquals("Itens de pedido não encontrados ou já deletados: [2]", erro.getMessage());
-		verify(itemPedidoRepository, never()).deletarAllById(any(), any());
-	}
-
-	@Test
-	public void testDeletarAllByIdListaVazia() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(true);
-		when(itemPedidoRepository.buscarPorIds(List.of(), EMPRESA_ID)).thenReturn(List.of());
-
-		MsgApiException erro = assertThrows(MsgApiException.class, () -> itemPedidoService.deletarAllById(List.of(), EMPRESA_ID));
-
-		assertEquals("Nenhum registro informado para deletar.", erro.getMessage());
-	}
-
-	@Test
-	public void testDeletarAllByIdSemSerAdministrador() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(false);
-
-		MsgApiException erro = assertThrows(MsgApiException.class, () -> itemPedidoService.deletarAllById(List.of(1L, 2L), EMPRESA_ID));
-
-		assertEquals("Apenas administradores podem excluir registros em lote.", erro.getMessage());
-		assertEquals(HttpStatus.FORBIDDEN, erro.getStatus());
+		assertEquals("Exclusão em lote de itens de pedido não é permitida. Exclua um registro por vez.", erro.getMessage());
 		verifyNoInteractions(itemPedidoRepository);
 	}
 
@@ -475,6 +425,7 @@ public class TestItemPedidoService {
 	public void testDeleteByIdAndPedido() {
 		when(itemPedidoRepository.buscarPorId(1L, EMPRESA_ID)).thenReturn(Optional.of(salvo(1L, PEDIDO_ID)));
 
+		when(pedidoRepository.buscarPorId(PEDIDO_ID, EMPRESA_ID)).thenReturn(Optional.of(pedido(PEDIDO_ID, "PED-1")));
 		itemPedidoService.deleteByIdAndPedido(1L, PEDIDO_ID, EMPRESA_ID);
 
 		verify(itemPedidoRepository).deleteByIdAndPedido(1L, PEDIDO_ID, EMPRESA_ID);

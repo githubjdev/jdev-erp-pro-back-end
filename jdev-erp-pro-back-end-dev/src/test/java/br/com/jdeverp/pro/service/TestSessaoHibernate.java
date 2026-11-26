@@ -204,6 +204,8 @@ public class TestSessaoHibernate extends TestContextoApi {
 
 		ProdutoDTO salvo = produtoService.salvar(produto);
 		idProduto = salvo.getId();
+		/* Estoque não entra pelo cadastro do produto: fixture grava direto no banco */
+		executarSql("update produto set estoque = 100 where id = ?", idProduto);
 		assertEquals(nomeCategoria, salvo.getCategoriaNome());
 
 		assertEquals(nomeCategoria, produtoService.buscarPorId(idProduto, empresaId).orElseThrow().getCategoriaNome());

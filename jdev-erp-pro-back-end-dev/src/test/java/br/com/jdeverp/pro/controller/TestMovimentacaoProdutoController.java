@@ -33,6 +33,9 @@ public class TestMovimentacaoProdutoController extends TestContextoApi {
 				"estoqueMinimo", 1, "sku", "SKU-M-" + sufixo, "unidadeMedida", "UNIDADE", "categoria", ref(categoria)))
 				.andExpect(status().isOk()));
 
+		/* Estoque não entra pelo cadastro do produto: fixture grava direto no banco */
+		executarSql("update produto set estoque = 100 where id = ?", idProduto);
+
 		UsuarioTeste cliente = criarUsuario("Cliente", false);
 		numeroPedido = "PED-MOV-" + sufixo;
 		idPedido = id(post("/api/pedido/salvar", mapa("numeroPedido", numeroPedido, "statusPedido", "FATURADO",
@@ -139,8 +142,10 @@ public class TestMovimentacaoProdutoController extends TestContextoApi {
 	@Test
 	@Order(9)
 	public void testDeletarTodosPorIds() throws Exception {
-		delete("/api/movimentacaoProduto/deletarTodosPorIds", ids(idMovimentacaoSemPedido)).andExpect(status().isNoContent());
-		get("/api/movimentacaoProduto/existePorId/{id}", idMovimentacaoSemPedido).andExpect(jsonPath("$").value(false));
+		/* Exclusão em lote bloqueada: a movimentação continua existindo */
+		delete("/api/movimentacaoProduto/deletarTodosPorIds", ids(idMovimentacaoSemPedido)).andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Exclusão em lote de movimentações de estoque não é permitida. Exclua um registro por vez."));
+		get("/api/movimentacaoProduto/existePorId/{id}", idMovimentacaoSemPedido).andExpect(jsonPath("$").value(true));
 	}
 
 	@Test
@@ -166,9 +171,8 @@ public class TestMovimentacaoProdutoController extends TestContextoApi {
 	@Test
 	@Order(12)
 	public void testDeletarTodos() throws Exception {
-		post("/api/movimentacaoProduto/salvar", movimentacaoJson(null, "ENTRADA_AJUSTE", 1, null)).andExpect(status().isOk());
-		delete("/api/movimentacaoProduto/deletarTodos").andExpect(status().isOk()).andExpect(jsonPath("$").value(1));
-		delete("/api/movimentacaoProduto/deletarTodos").andExpect(status().isBadRequest());
+		delete("/api/movimentacaoProduto/deletarTodos").andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Exclusão em lote de movimentações de estoque não é permitida. Exclua um registro por vez."));
 	}
 
 

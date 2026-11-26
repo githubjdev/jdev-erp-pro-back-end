@@ -43,6 +43,12 @@ public class UsuarioLogadoService {
 		return roleId != null && getUsuarioLogado().getAcessos().stream().anyMatch(role -> roleId.equals(role.getId()));
 	}
 
+	/** Se o usuário logado tem pelo menos um dos acessos informados (ex.: ROLE_ADMIN). */
+	public boolean possuiAlgumAcesso(String... acessos) {
+		java.util.Set<String> desejados = java.util.Set.of(acessos);
+		return getUsuarioLogado().getAcessos().stream().anyMatch(role -> desejados.contains(role.getAcesso()));
+	}
+
 	/** Se o id é o do próprio usuário logado. */
 	public boolean isUsuarioLogado(Long usuarioId) {
 		return usuarioId != null && usuarioId.equals(getUsuarioLogadoId());

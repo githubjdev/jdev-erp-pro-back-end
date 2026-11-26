@@ -27,7 +27,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 
 import br.com.jdeverp.pro.dto.MovimentacaoProdutoDTO;
 import br.com.jdeverp.pro.enums.TipoMovimentacaoProduto;
@@ -87,6 +86,7 @@ public class TestMovimentacaoProdutoService {
 		Produto produto = new Produto();
 		produto.setId(id);
 		produto.setNome(nome);
+		produto.setEstoque(100.0);
 		return produto;
 	}
 
@@ -312,77 +312,18 @@ public class TestMovimentacaoProdutoService {
 	}
 
 	@Test
-	public void testDeleteAll() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(true);
-		when(movimentacaoProdutoRepository.total(EMPRESA_ID)).thenReturn(2L);
-		when(movimentacaoProdutoRepository.deleteAll(EMPRESA_ID)).thenReturn(2L);
-
-		assertEquals(2L, movimentacaoProdutoService.deleteAll(EMPRESA_ID));
-	}
-
-	@Test
-	public void testDeleteAllSemRegistros() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(true);
-		when(movimentacaoProdutoRepository.total(EMPRESA_ID)).thenReturn(0L);
-
+	public void testDeleteAllBloqueado() {
 		MsgApiException erro = assertThrows(MsgApiException.class, () -> movimentacaoProdutoService.deleteAll(EMPRESA_ID));
 
-		assertEquals("Nenhuma movimentação de produto encontrada para deletar ou todas já foram deletadas.", erro.getMessage());
-		verify(movimentacaoProdutoRepository, never()).deleteAll(anyLong());
-	}
-
-	@Test
-	public void testDeleteAllSemSerAdministrador() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(false);
-
-		MsgApiException erro = assertThrows(MsgApiException.class, () -> movimentacaoProdutoService.deleteAll(EMPRESA_ID));
-
-		assertEquals("Apenas administradores podem excluir registros em lote.", erro.getMessage());
-		assertEquals(HttpStatus.FORBIDDEN, erro.getStatus());
+		assertEquals("Exclusão em lote de movimentações de estoque não é permitida. Exclua um registro por vez.", erro.getMessage());
 		verifyNoInteractions(movimentacaoProdutoRepository);
 	}
 
 	@Test
-	public void testDeletarAllById() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(true);
-		when(movimentacaoProdutoRepository.buscarPorIds(List.of(1L, 2L), EMPRESA_ID)).thenReturn(List.of(salva(1L, null), salva(2L, null)));
+	public void testDeletarAllByIdBloqueado() {
+		MsgApiException erro = assertThrows(MsgApiException.class, () -> movimentacaoProdutoService.deletarAllById(List.of(1L, 2L), EMPRESA_ID));
 
-		movimentacaoProdutoService.deletarAllById(List.of(1L, 2L), EMPRESA_ID);
-
-		verify(movimentacaoProdutoRepository).deletarAllById(List.of(1L, 2L), EMPRESA_ID);
-	}
-
-	@Test
-	public void testDeletarAllByIdComIdNaoEncontrado() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(true);
-		when(movimentacaoProdutoRepository.buscarPorIds(List.of(1L, 2L), EMPRESA_ID)).thenReturn(List.of(salva(1L, null)));
-
-		MsgApiException erro = assertThrows(MsgApiException.class,
-				() -> movimentacaoProdutoService.deletarAllById(List.of(1L, 2L), EMPRESA_ID));
-
-		assertEquals("Movimentações de produto não encontradas ou já deletadas: [2]", erro.getMessage());
-		verify(movimentacaoProdutoRepository, never()).deletarAllById(any(), any());
-	}
-
-	@Test
-	public void testDeletarAllByIdListaVazia() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(true);
-		when(movimentacaoProdutoRepository.buscarPorIds(List.of(), EMPRESA_ID)).thenReturn(List.of());
-
-		MsgApiException erro = assertThrows(MsgApiException.class, () -> movimentacaoProdutoService.deletarAllById(List.of(), EMPRESA_ID));
-
-		assertEquals("Nenhum registro informado para deletar.", erro.getMessage());
-	}
-
-	@Test
-	public void testDeletarAllByIdSemSerAdministrador() {
-		when(usuarioLogadoService.isAdmin()).thenReturn(false);
-
-		MsgApiException erro = assertThrows(MsgApiException.class,
-				() -> movimentacaoProdutoService.deletarAllById(List.of(1L, 2L), EMPRESA_ID));
-
-		assertEquals("Apenas administradores podem excluir registros em lote.", erro.getMessage());
-		assertEquals(HttpStatus.FORBIDDEN, erro.getStatus());
+		assertEquals("Exclusão em lote de movimentações de estoque não é permitida. Exclua um registro por vez.", erro.getMessage());
 		verifyNoInteractions(movimentacaoProdutoRepository);
 	}
 

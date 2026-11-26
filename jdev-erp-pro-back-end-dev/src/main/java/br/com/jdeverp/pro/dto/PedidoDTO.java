@@ -32,5 +32,7 @@ public class PedidoDTO {
 	private Long clienteId;
 	private String clienteNome;
 	private Long empresaId;
+	private Boolean estoqueBaixado;
+	private java.util.List<ItemPedidoDTO> itens;
 
 }

@@ -1,18 +1,19 @@
 package br.com.jdeverp.pro.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.jdeverp.pro.dto.MovimentacaoProdutoDTO;
+import br.com.jdeverp.pro.enums.TipoMovimentacaoProduto;
 import br.com.jdeverp.pro.exception.MsgApiException;
 import br.com.jdeverp.pro.model.MovimentacaoProduto;
 import br.com.jdeverp.pro.model.Pedido;
@@ -58,6 +59,7 @@ public class MovimentacaoProdutoService {
 		}
 
 		movimentacaoProduto.setEmpresa(usuarioLogadoService.getEmpresaLogada());
+		ajustarEstoque(movimentacaoProduto.getProduto(), movimentacaoProduto.getTipoMovimentacaoProduto(), movimentacaoProduto.getQuantidade(), 1, empresaId);
 		return converterParaDto(movimentacaoProdutoRepository.saveAndFlush(movimentacaoProduto));
 	}
 
@@ -71,14 +73,20 @@ public class MovimentacaoProdutoService {
 		MovimentacaoProduto existente = movimentacaoProdutoRepository.buscarPorId(movimentacaoProduto.getId(), empresaId)
 				.orElseThrow(() -> new MsgApiException("Movimentação de produto não encontrada para a empresa logada."));
 
+		Produto novoProduto = validarProduto(movimentacaoProduto.getProduto(), empresaId);
+		Pedido novoPedido = validarPedido(movimentacaoProduto.getPedido(), empresaId);
+
+		/*Desfaz o efeito antigo no estoque e aplica o novo*/
+		ajustarEstoque(existente.getProduto(), existente.getTipoMovimentacaoProduto(), existente.getQuantidade(), -1, empresaId);
 		existente.setQuantidade(movimentacaoProduto.getQuantidade());
 		existente.setValor(movimentacaoProduto.getValor());
 		existente.setTipoMovimentacaoProduto(movimentacaoProduto.getTipoMovimentacaoProduto());
 		if (movimentacaoProduto.getDataMovimento() != null) {
 			existente.setDataMovimento(movimentacaoProduto.getDataMovimento());
 		}
-		existente.setProduto(validarProduto(movimentacaoProduto.getProduto(), empresaId));
-		existente.setPedido(validarPedido(movimentacaoProduto.getPedido(), empresaId));
+		existente.setProduto(novoProduto);
+		existente.setPedido(novoPedido);
+		ajustarEstoque(existente.getProduto(), existente.getTipoMovimentacaoProduto(), existente.getQuantidade(), 1, empresaId);
 		return converterParaDto(movimentacaoProdutoRepository.saveAndFlush(existente));
 	}
 
@@ -124,19 +132,18 @@ public class MovimentacaoProdutoService {
 			throw new MsgApiException("Movimentação de produto não encontrada ou já foi deletada.");
 		}
 
+		desfazerEstoque(id, idEmpresa);
 		movimentacaoProdutoRepository.deleteById(id, idEmpresa);
 	}
 
-	/*Exclusão em lote apaga tudo da empresa: só ROLE_ADMIN (P21)*/
-	private void exigirAdminParaExclusaoEmLote() {
-		if (!usuarioLogadoService.isAdmin()) {
-			throw new MsgApiException("Apenas administradores podem excluir registros em lote.", HttpStatus.FORBIDDEN);
-		}
+	/*Exclusão em lote bloqueada: apagaria registros que já mexeram no estoque e nos totais do pedido sem desfazer o efeito. Exclua um por vez.*/
+	private void bloquearExclusaoEmLote() {
+		throw new MsgApiException("Exclusão em lote de movimentações de estoque não é permitida. Exclua um registro por vez.");
 	}
 
 	@Transactional
 	public long deleteAll(Long empresaID) {
-		exigirAdminParaExclusaoEmLote();
+		bloquearExclusaoEmLote();
 
 		if (movimentacaoProdutoRepository.total(empresaID) == 0) {
 			throw new MsgApiException("Nenhuma movimentação de produto encontrada para deletar ou todas já foram deletadas.");
@@ -147,7 +154,7 @@ public class MovimentacaoProdutoService {
 
 	@Transactional
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
-		exigirAdminParaExclusaoEmLote();
+		bloquearExclusaoEmLote();
 
 		List<Long> encontrados = movimentacaoProdutoRepository.buscarPorIds(ids, empresaId).stream().map(MovimentacaoProduto::getId).toList();
 		List<Long> naoEncontrados = new ArrayList<>();
@@ -216,7 +223,35 @@ public class MovimentacaoProdutoService {
 			throw new MsgApiException("Movimentação de produto não encontrada ou já foi deletada.");
 		}
 
+		desfazerEstoque(id, idEmpresa);
 		movimentacaoProdutoRepository.deleteByIdAndPedido(id, idPedido, idEmpresa);
+	}
+
+	/*Ao excluir uma movimentação, o efeito dela no estoque é desfeito*/
+	private void desfazerEstoque(Long id, Long empresaId) {
+		movimentacaoProdutoRepository.buscarPorId(id, empresaId).ifPresent(m ->
+				ajustarEstoque(m.getProduto(), m.getTipoMovimentacaoProduto(), m.getQuantidade(), -1, empresaId));
+	}
+
+	/**
+	 * Aplica no estoque do produto o efeito da movimentação (entrada soma, saída subtrai; sinal -1 desfaz).
+	 * Produto lido com lock; o estoque nunca fica negativo.
+	 */
+	private void ajustarEstoque(Produto produto, TipoMovimentacaoProduto tipo, Double quantidade, int sinal, Long empresaId) {
+		double diferenca = EstoquePedidoService.delta(tipo, quantidade) * sinal;
+		if (diferenca == 0 || produto == null) {
+			return;
+		}
+
+		Produto travado = produtoRepository.buscarPorIdsComLock(List.of(produto.getId()), empresaId).stream().findFirst().orElse(produto);
+		BigDecimal atual = BigDecimal.valueOf(travado.getEstoque() == null ? 0d : travado.getEstoque());
+		BigDecimal novo = atual.add(BigDecimal.valueOf(diferenca));
+		if (novo.signum() < 0) {
+			throw new MsgApiException("Estoque insuficiente para o produto " + travado.getNome() + " (disponível: " + travado.getEstoque() + ").");
+		}
+
+		travado.setEstoque(novo.doubleValue());
+		produtoRepository.saveAndFlush(travado);
 	}
 
 	// ====================Conversão para DTO====================

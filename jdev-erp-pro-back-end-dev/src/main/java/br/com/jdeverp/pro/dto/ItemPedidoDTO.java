@@ -11,6 +11,7 @@ public class ItemPedidoDTO {
 
 	private Long id;
 	private Double quantidade;
+	private BigDecimal precoUnitario;
 	private BigDecimal subTotal;
 	private BigDecimal desconto;
 	private BigDecimal total;

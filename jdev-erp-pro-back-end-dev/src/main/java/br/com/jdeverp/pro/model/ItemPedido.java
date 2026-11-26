@@ -40,6 +40,9 @@ public class ItemPedido extends EntidadeBase {
 	
 	@ToString.Include
 	private BigDecimal subTotal = BigDecimal.ZERO;
+	/*Preço do produto congelado no momento da venda (definido pelo servidor)*/
+	@Column(name = "preco_unitario", nullable = false)
+	private BigDecimal precoUnitario = BigDecimal.ZERO;
 	@ToString.Include
 	private BigDecimal desconto = BigDecimal.ZERO;
 	@ToString.Include

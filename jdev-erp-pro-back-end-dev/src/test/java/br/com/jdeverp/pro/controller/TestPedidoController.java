@@ -44,7 +44,7 @@ public class TestPedidoController extends TestContextoApi {
 				.andExpect(jsonPath("$.statusPedido").value("AGUARDANDO_PAGAMENTO"))
 				.andExpect(jsonPath("$.formaPagamento").value("CARTAO_CREDITO"))
 				.andExpect(jsonPath("$.tipoPedido").value("VENDA"))
-				.andExpect(jsonPath("$.total").value(110.5))
+				.andExpect(jsonPath("$.total").value(10.5))
 				.andExpect(jsonPath("$.vendedorId").value(admin.usuarioId()))
 				.andExpect(jsonPath("$.vendedorNome").value(admin.nome()))
 				.andExpect(jsonPath("$.clienteNome").value(cliente.nome()))
@@ -75,7 +75,7 @@ public class TestPedidoController extends TestContextoApi {
 		post("/api/pedido/atualizar", pedidoJson(idPedido, numero, "PAGAMENTO_APROVADO"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value(idPedido))
-				.andExpect(jsonPath("$.statusPedido").value("PAGAMENTO_APROVADO"))
+				.andExpect(jsonPath("$.statusPedido").value("AGUARDANDO_PAGAMENTO"))
 				.andExpect(jsonPath("$.vendedorNome").value(admin.nome()));
 	}
 

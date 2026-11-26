@@ -57,14 +57,14 @@ public class TestJDevERPPROApplication {
 	public void testMainBancoVazio() {
 		try (ConfigurableApplicationContext contexto = subir(banco)) {
 			Flyway flyway = contexto.getBean(Flyway.class);
-			assertEquals(5, flyway.info().applied().length);
+			assertEquals(7, flyway.info().applied().length);
 			assertEquals(0, flyway.info().pending().length);
-			assertEquals("20261112.220700", flyway.info().current().getVersion().getVersion());
+			assertEquals("20261125.110000", flyway.info().current().getVersion().getVersion());
 		}
 
 		historico = banco.historicoFlyway();
 		estrutura = banco.estrutura();
-		assertEquals(5, historico.size());
+		assertEquals(7, historico.size());
 
 		try (BancoTemporarioTeste soFlyway = BancoTemporarioTeste.criar("so_flyway")) {
 			soFlyway.flyway().migrate();
@@ -116,7 +116,7 @@ public class TestJDevERPPROApplication {
 				assertEquals(0, contexto.getBean(Flyway.class).info().pending().length);
 			}
 
-			assertEquals(List.of("20261112.162000|BASELINE", "20261112.220600|SQL", "20261112.220700|SQL"),
+			assertEquals(List.of("20261112.162000|BASELINE", "20261112.220600|SQL", "20261112.220700|SQL", "20261125.100000|SQL", "20261125.110000|SQL"),
 					existente.consultar("SELECT version || '|' || type FROM public.flyway_schema_history ORDER BY installed_rank"));
 			assertEquals(estrutura, existente.estrutura(), "o banco existente ficou diferente de um banco novo: "
 					+ BancoTemporarioTeste.diferencas(estrutura, existente.estrutura()));

@@ -3,11 +3,12 @@ package br.com.jdeverp.pro.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.StreamSupport;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +48,8 @@ public class ProdutoService {
 			throw new MsgApiException("Já existe um produto com o mesmo nome para a empresa logada.");
 		}
 
+		/*Produto novo começa com estoque 0: o estoque inicial entra por movimentação (ex.: ENTRADA_INVENTARIO)*/
+		produto.setEstoque(0.0);
 		produto.setCategoria(validarCategoria(produto.getCategoria(), empresaId));
 		produto.setEmpresa(usuarioLogadoService.getEmpresaLogada());
 		return converterParaDto(produtoRepository.saveAndFlush(produto));
@@ -59,15 +62,16 @@ public class ProdutoService {
 		}
 
 		Long empresaId = usuarioLogadoService.getEmpresaIdLogada();
-		if (!produtoRepository.buscarPorId(produto.getId(), empresaId).isPresent()) {
-			throw new MsgApiException("Produto não encontrado para a empresa logada.");
-		}
+		Produto existente = produtoRepository.buscarPorId(produto.getId(), empresaId)
+				.orElseThrow(() -> new MsgApiException("Produto não encontrado para a empresa logada."));
 
 		if (produtoRepository.existePorNomeDiferenteId(produto.getId(), produto.getNome(), empresaId)) {
 			throw new MsgApiException("Já existe outro produto com o mesmo nome para a empresa logada.");
 		}
 
 		produto.setCategoria(validarCategoria(produto.getCategoria(), empresaId));
+		/*O estoque do cadastro é ignorado: o valor atual do banco é mantido (só pedido ou movimentação alteram)*/
+		produto.setEstoque(existente.getEstoque());
 		produto.setEmpresa(usuarioLogadoService.getEmpresaLogada());
 		return converterParaDto(produtoRepository.saveAndFlush(produto));
 	}
@@ -79,6 +83,11 @@ public class ProdutoService {
 
 		return categoriaRepository.buscarPorId(categoria.getId(), empresaId)
 				.orElseThrow(() -> new MsgApiException("Categoria não encontrada para a empresa logada."));
+	}
+
+	/*Produtos com estoque igual ou abaixo do mínimo*/
+	public List<ProdutoDTO> estoqueBaixo(Long idEmpresa) {
+		return converterListaParaDto(produtoRepository.estoqueBaixo(idEmpresa));
 	}
 
 	public List<ProdutoDTO> findAll(Long idEmpresa) {
@@ -122,7 +131,14 @@ public class ProdutoService {
 			throw new MsgApiException("Nenhum produto encontrado para deletar ou todos já foram deletados.");
 		}
 
-		return produtoRepository.deleteAll(empresaID);
+		/*Só apaga produto sem item de pedido nem movimentação; os demais ficam*/
+		List<Long> semUso = produtoRepository.idsSemUso(empresaID);
+		if (semUso.isEmpty()) {
+			throw new MsgApiException("Nenhum produto pode ser excluído em lote: todos têm pedido, item de pedido ou movimentação.");
+		}
+
+		produtoRepository.deletarAllById(semUso, empresaID);
+		return semUso.size();
 	}
 
 	@Transactional
@@ -143,6 +159,12 @@ public class ProdutoService {
 
 		if (!naoEncontrados.isEmpty()) {
 			throw new MsgApiException("Produtos não encontrados ou já deletados: " + naoEncontrados);
+		}
+
+		List<Produto> emUso = produtoRepository.emUsoPorIds(StreamSupport.stream(ids.spliterator(), false).toList(), empresaId);
+		if (!emUso.isEmpty()) {
+			throw new MsgApiException("Produtos com pedido, item de pedido ou movimentação não podem ser excluídos em lote: "
+					+ emUso.stream().map(Produto::getNome).toList());
 		}
 
 		produtoRepository.deletarAllById(ids, empresaId);
@@ -181,6 +203,7 @@ public class ProdutoService {
 		dto.setDescricao(produto.getDescricao());
 		dto.setImagem(produto.getImagem());
 		dto.setPreco(produto.getPreco());
+		dto.setPrecoCusto(produto.getPrecoCusto());
 		dto.setEstoque(produto.getEstoque());
 		dto.setEstoqueMinimo(produto.getEstoqueMinimo());
 		dto.setSku(produto.getSku());

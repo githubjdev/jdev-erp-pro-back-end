@@ -31,7 +31,7 @@ public class TestProdutoController extends TestContextoApi {
 
 	private Map<String, Object> produtoJson(Long id, String nome, String sku, Long categoria) {
 		return mapa("id", id, "nome", nome, "descricao", "Produto de teste", "imagem", "imagem-base64",
-				"preco", 25.9, "estoque", 10, "estoqueMinimo", 2, "sku", sku, "codigoBarra", "789" + sufixo,
+				"preco", 25.9, "precoCusto", 12.5, "estoque", 10, "estoqueMinimo", 2, "sku", sku, "codigoBarra", "789" + sufixo,
 				"unidadeMedida", "UNIDADE", "categoria", ref(categoria));
 	}
 
@@ -43,6 +43,7 @@ public class TestProdutoController extends TestContextoApi {
 				.andExpect(jsonPath("$.nome").value(nome))
 				.andExpect(jsonPath("$.unidadeMedida").value("UNIDADE"))
 				.andExpect(jsonPath("$.preco").value(25.9))
+				.andExpect(jsonPath("$.precoCusto").value(12.5))
 				.andExpect(jsonPath("$.categoriaId").value(idCategoria))
 				.andExpect(jsonPath("$.categoriaNome").value(nomeCategoria))
 				.andExpect(jsonPath("$.empresaId").value(empresaId)));
@@ -61,11 +62,18 @@ public class TestProdutoController extends TestContextoApi {
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("Preço deve ser de no mínimo R$ 1,00"));
 
+		/* Preço de custo: 0 é permitido (padrão), negativo não */
+		Map<String, Object> custoNegativo = produtoJson(null, "Custo negativo " + sufixo, "SKU-C-" + sufixo, idCategoria);
+		custoNegativo.put("precoCusto", -1);
+		post("/api/produto/salvar", custoNegativo)
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Preço de custo não pode ser negativo"));
+
 		Map<String, Object> semEstoque = produtoJson(null, "Sem estoque " + sufixo, "SKU-E-" + sufixo, idCategoria);
-		semEstoque.put("estoque", 0);
+		semEstoque.put("estoque", -1);
 		post("/api/produto/salvar", semEstoque)
 				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.message").value("Estoque deve ser de no mínimo 1"));
+				.andExpect(jsonPath("$.message").value("Estoque não pode ser negativo"));
 
 		Map<String, Object> semEstoqueMinimo = produtoJson(null, "Sem mínimo " + sufixo, "SKU-M-" + sufixo, idCategoria);
 		semEstoqueMinimo.remove("estoqueMinimo");

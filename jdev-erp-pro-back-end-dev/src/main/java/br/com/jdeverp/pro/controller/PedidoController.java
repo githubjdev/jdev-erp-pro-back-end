@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,7 +19,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.jdeverp.pro.dto.PedidoComItensDTO;
 import br.com.jdeverp.pro.dto.PedidoDTO;
+import br.com.jdeverp.pro.enums.StatusPedido;
 import br.com.jdeverp.pro.model.Pedido;
 import br.com.jdeverp.pro.service.PedidoService;
 import br.com.jdeverp.pro.service.UsuarioLogadoService;
@@ -38,6 +41,25 @@ public class PedidoController {
         @PostMapping("/salvar")
         public ResponseEntity<PedidoDTO> salvar(@RequestBody @Valid Pedido pedido) {
                 return ResponseEntity.ok(pedidoService.salvar(pedido));
+        }
+
+        /*Cria o pedido já com a lista de itens; preço e totais são calculados no servidor*/
+        @PostMapping("/salvarComItens")
+        public ResponseEntity<PedidoDTO> salvarComItens(@RequestBody @Valid PedidoComItensDTO pedido) {
+                return ResponseEntity.ok(pedidoService.salvarComItens(pedido));
+        }
+
+        /*Atualiza dados e itens de um pedido aguardando pagamento ou com pagamento recusado*/
+        @PostMapping("/atualizarComItens")
+        public ResponseEntity<PedidoDTO> atualizarComItens(@RequestBody @Valid PedidoComItensDTO pedido) {
+                return ResponseEntity.ok(pedidoService.atualizarComItens(pedido));
+        }
+
+        /*Muda o status (máquina de status). Só ADMIN, VENDEDOR ou GERENTE. Aprovar pagamento baixa o estoque.*/
+        @PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_VENDEDOR','ROLE_GERENTE')")
+        @PatchMapping("/alterarStatus/{id}/{statusPedido}")
+        public ResponseEntity<PedidoDTO> alterarStatus(@PathVariable Long id, @PathVariable StatusPedido statusPedido) {
+                return ResponseEntity.ok(pedidoService.alterarStatus(id, statusPedido));
         }
 
         @PostMapping("/atualizar")

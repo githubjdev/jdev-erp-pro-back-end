@@ -43,7 +43,7 @@ import br.com.jdeverp.pro.contexto.BancoTemporarioTeste;
 public class TestMigracoesFlyway {
 
 	static final List<String> VERSOES = List.of("20261112.160000", "20261112.161000", "20261112.162000", "20261112.220600",
-			"20261112.220700");
+			"20261112.220700", "20261125.100000", "20261125.110000");
 
 	/** Migrações criadas depois da adoção do Flyway: rodam também sobre o banco que recebeu baseline. */
 	static final List<String> VERSOES_POSTERIORES_AO_BASELINE = VERSOES.subList(3, VERSOES.size());
@@ -82,7 +82,7 @@ public class TestMigracoesFlyway {
 			assertEquals(2, banco.contar("SELECT count(*) FROM public.plano"));
 			assertEquals(1, banco.contar("SELECT count(*) FROM public.empresa"));
 			assertEquals(30, banco.contar("SELECT count(*) FROM public.categoria WHERE empresa_id = 1"));
-			assertEquals(List.of("ROLE_ADMIN", "ROLE_USER"), banco.consultar("SELECT acesso FROM public.role ORDER BY acesso"));
+			assertEquals(List.of("ROLE_ADMIN", "ROLE_GERENTE", "ROLE_USER", "ROLE_VENDEDOR"), banco.consultar("SELECT acesso FROM public.role ORDER BY acesso"));
 			assertEquals(List.of("true"), banco.consultar("SELECT liberado::text FROM public.usuario WHERE id = 1"));
 			assertEquals(2, banco.contar("SELECT last_value FROM public.seq_plano"), "a carga avança a sequence: o próximo plano é o 3");
 			/* Antigo V2_PESSOA_DOCUMENTO_POR_TIPO */
@@ -245,7 +245,8 @@ public class TestMigracoesFlyway {
 
 		assertTrue(nomes.containsAll(List.of("V20261112_160000__criacao_estrutura_inicial.sql",
 				"V20261112_161000__carga_inicial.sql", "V20261112_162000__pessoa_documento_por_tipo.sql",
-				"V20261112_220600__empresa_bloqueio_obrigatorio.sql", "V20261112_220700__usuario_liberado_obrigatorio.sql")),
+				"V20261112_220600__empresa_bloqueio_obrigatorio.sql", "V20261112_220700__usuario_liberado_obrigatorio.sql",
+				"V20261125_100000__pedido_calculo_estoque.sql", "V20261125_110000__produto_preco_custo.sql")),
 				nomes.toString());
 		assertEquals(VERSOES.size(), nomes.size(), "Migração nova? Inclua a versão em VERSOES: " + nomes);
 	}

@@ -81,6 +81,10 @@ public class Pedido extends EntidadeBase {
 	@ToString.Include
 	private BigDecimal total = BigDecimal.ZERO;
 	
+	/*true quando o estoque dos itens já foi baixado (evita baixar ou estornar duas vezes)*/
+	@Column(name = "estoque_baixado", nullable = false)
+	private Boolean estoqueBaixado = false;
+
 	private String observacao;
 
 	@ManyToOne(fetch = FetchType.LAZY)

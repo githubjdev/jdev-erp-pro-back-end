@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -43,6 +42,9 @@ public class ItemPedidoService {
 	private ProdutoRepository produtoRepository;
 
 	@Autowired
+	private PedidoCalculoService pedidoCalculoService;
+
+	@Autowired
 	private UsuarioLogadoService usuarioLogadoService;
 
 	@Transactional
@@ -58,7 +60,12 @@ public class ItemPedidoService {
 		itemPedido.setPedido(pedido);
 		itemPedido.setProduto(produto);
 		itemPedido.setEmpresa(usuarioLogadoService.getEmpresaLogada());
-		return converterParaDto(itemPedidoRepository.saveAndFlush(itemPedido));
+		pedidoCalculoService.exigirEditavel(pedido);
+		itemPedido.setPrecoUnitario(pedidoCalculoService.precoDoItem(produto, pedido.getTipoPedido()));
+		pedidoCalculoService.calcularItem(itemPedido);
+		ItemPedidoDTO salvo = converterParaDto(itemPedidoRepository.saveAndFlush(itemPedido));
+		recalcularPedido(pedido, empresaId);
+		return salvo;
 	}
 
 	@Transactional
@@ -78,13 +85,33 @@ public class ItemPedidoService {
 			throw new MsgApiException("O produto já foi incluído neste pedido.");
 		}
 
+		if (!existente.getPedido().getId().equals(pedido.getId())) {
+			throw new MsgApiException("O item não pode ser movido para outro pedido.");
+		}
+		pedidoCalculoService.exigirEditavel(pedido);
+
 		existente.setQuantidade(itemPedido.getQuantidade());
-		existente.setSubTotal(itemPedido.getSubTotal());
 		existente.setDesconto(itemPedido.getDesconto());
-		existente.setTotal(itemPedido.getTotal());
 		existente.setProduto(produto);
 		existente.setPedido(pedido);
-		return converterParaDto(itemPedidoRepository.saveAndFlush(existente));
+		existente.setPrecoUnitario(pedidoCalculoService.precoDoItem(produto, pedido.getTipoPedido()));
+		pedidoCalculoService.calcularItem(existente);
+		ItemPedidoDTO atualizado = converterParaDto(itemPedidoRepository.saveAndFlush(existente));
+		recalcularPedido(pedido, empresaId);
+		return atualizado;
+	}
+
+	private Pedido pedidoEditavelParaExclusao(Long idPedido, Long empresaId) {
+		Pedido pedido = pedidoRepository.buscarPorId(idPedido, empresaId)
+				.orElseThrow(() -> new MsgApiException("Pedido não encontrado para a empresa logada."));
+		pedidoCalculoService.exigirEditavel(pedido);
+		return pedido;
+	}
+
+	/*Refaz subtotal e total do pedido a partir dos itens atuais*/
+	private void recalcularPedido(Pedido pedido, Long empresaId) {
+		pedidoCalculoService.calcularPedido(pedido, itemPedidoRepository.findAll(pedido.getId(), empresaId));
+		pedidoRepository.saveAndFlush(pedido);
 	}
 
 	private Pedido validarPedido(Pedido pedido, Long empresaId) {
@@ -128,19 +155,19 @@ public class ItemPedidoService {
 			throw new MsgApiException("Item do pedido não encontrado ou já foi deletado.");
 		}
 
+		Pedido pedido = pedidoEditavelParaExclusao(idPedido, idEmpresa);
 		itemPedidoRepository.deleteById(id, idPedido, idEmpresa);
+		recalcularPedido(pedido, idEmpresa);
 	}
 
-	/*Exclusão em lote apaga tudo da empresa: só ROLE_ADMIN (P21)*/
-	private void exigirAdminParaExclusaoEmLote() {
-		if (!usuarioLogadoService.isAdmin()) {
-			throw new MsgApiException("Apenas administradores podem excluir registros em lote.", HttpStatus.FORBIDDEN);
-		}
+	/*Exclusão em lote bloqueada: apagaria registros que já mexeram no estoque e nos totais do pedido sem desfazer o efeito. Exclua um por vez.*/
+	private void bloquearExclusaoEmLote() {
+		throw new MsgApiException("Exclusão em lote de itens de pedido não é permitida. Exclua um registro por vez.");
 	}
 
 	@Transactional
 	public long deleteAll(Long empresaID) {
-		exigirAdminParaExclusaoEmLote();
+		bloquearExclusaoEmLote();
 
 		if (itemPedidoRepository.total(empresaID) == 0) {
 			throw new MsgApiException("Nenhum item de pedido encontrado para deletar ou todos já foram deletados.");
@@ -151,7 +178,7 @@ public class ItemPedidoService {
 
 	@Transactional
 	public void deletarAllById(Iterable<Long> ids, Long empresaId) {
-		exigirAdminParaExclusaoEmLote();
+		bloquearExclusaoEmLote();
 
 		List<Long> encontrados = itemPedidoRepository.buscarPorIds(ids, empresaId).stream().map(ItemPedido::getId).toList();
 		List<Long> naoEncontrados = new ArrayList<>();
@@ -220,7 +247,9 @@ public class ItemPedidoService {
 			throw new MsgApiException("Item do pedido não encontrado ou já foi deletado.");
 		}
 
+		Pedido pedido = pedidoEditavelParaExclusao(idPedido, idEmpresa);
 		itemPedidoRepository.deleteByIdAndPedido(id, idPedido, idEmpresa);
+		recalcularPedido(pedido, idEmpresa);
 	}
 
 	// ====================Conversão para DTO====================
@@ -229,6 +258,7 @@ public class ItemPedidoService {
 		ItemPedidoDTO dto = new ItemPedidoDTO();
 		dto.setId(itemPedido.getId());
 		dto.setQuantidade(itemPedido.getQuantidade());
+		dto.setPrecoUnitario(itemPedido.getPrecoUnitario());
 		dto.setSubTotal(itemPedido.getSubTotal());
 		dto.setDesconto(itemPedido.getDesconto());
 		dto.setTotal(itemPedido.getTotal());
